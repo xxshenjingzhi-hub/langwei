@@ -108,10 +108,10 @@ textarea {
 
 .nav-item:hover,
 .nav-item.active {
-  background: var(--blue-soft);
+  background: #f1f5fb;
   border-color: #d7e5ff;
   color: var(--blue);
-  box-shadow: inset 3px 0 0 var(--blue);
+  box-shadow: none;
 }
 
 .scope-note {
