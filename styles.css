@@ -511,6 +511,7 @@ td {
   background: #fff;
   padding: 18px;
   cursor: pointer;
+  position: relative;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
@@ -556,6 +557,23 @@ td {
 
 .project-card-progress {
   margin: 14px 0;
+}
+
+.project-card > .action-bar {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.project-card:hover > .action-bar,
+.project-card:focus-within > .action-bar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .toolbar-row {
