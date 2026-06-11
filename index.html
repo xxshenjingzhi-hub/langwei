@@ -17,9 +17,10 @@
           </div>
         </div>
         <nav class="nav" aria-label="主导航">
-          <button class="nav-item active" data-view="overview">项目总览</button>
-          <button class="nav-item" data-view="tasks">任务管理</button>
-          <button class="nav-item" data-view="materials">物料采购</button>
+          <button class="nav-item active" data-view="overview">项目管理</button>
+          <button class="nav-item" data-view="tasks">项目任务</button>
+          <button class="nav-item" data-view="materials">项目BOM</button>
+          <button class="nav-item" data-view="procurement">采购管理</button>
         </nav>
         <div class="scope-note">
           <span>当前版本</span>
@@ -30,7 +31,7 @@
       <main class="main">
         <header class="topbar">
           <div>
-            <h1>项目总览</h1>
+            <h1>项目管理</h1>
             <p>实时查看项目、任务、采购与入库进度</p>
           </div>
           <div class="topbar-actions">
@@ -83,6 +84,7 @@
                       <th>负责人</th>
                       <th>内部截止</th>
                       <th>完成度</th>
+                      <th>操作</th>
                     </tr>
                   </thead>
                   <tbody id="projectRows"></tbody>
@@ -137,9 +139,9 @@
         <section id="tasks" class="view">
           <section class="panel">
             <div class="panel-header">
-              <div>
-                <h2>任务管理</h2>
-                <p>按任务类型统计整体设计、软件算法研发、物料采购、组装调试、设备交付</p>
+                <div>
+                <h2>项目任务</h2>
+                <p>任务分为设计、采购、组装、交付四大类</p>
               </div>
               <button class="primary-button" data-dialog="taskDialog">新增任务</button>
             </div>
@@ -151,23 +153,25 @@
           <section class="panel">
             <div class="panel-header">
               <div>
-                <h2>物料需求</h2>
-                <p>逐条新增物料，物料明细描述用于记录用途、关键参数和特殊要求</p>
+                <h2>项目BOM</h2>
+                <p>BOM 是采购需求来源，可关联 BOM 物料项生成采购需求</p>
               </div>
-              <button class="primary-button" data-dialog="materialDialog">新增物料</button>
+              <button class="primary-button" data-dialog="materialDialog">新增BOM物料</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>物料名称</th><th>项目</th><th>规格型号</th><th>明细描述</th><th>数量</th><th>需求日期</th><th>需求人</th></tr></thead><tbody id="materialRows"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>物料名称</th><th>项目</th><th>规格型号</th><th>明细描述</th><th>数量</th><th>需求日期</th><th>需求人</th><th>操作</th></tr></thead><tbody id="materialRows"></tbody></table></div>
           </section>
+        </section>
 
-          <section class="panel compact-section">
+        <section id="procurement" class="view">
+          <section class="panel">
             <div class="panel-header">
               <div>
                 <h2>采购管理</h2>
-                <p>待交付 = 已下单未入库；采购进度按采购项统计</p>
+                <p>采购需求来源于项目BOM；待交付 = 已下单未入库</p>
               </div>
-              <button class="primary-button" data-dialog="purchaseDialog">新增采购项</button>
+              <button class="primary-button" data-dialog="purchaseDialog">新增采购需求</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>采购项</th><th>项目</th><th>供应商</th><th>状态</th><th>订单号</th><th>预计交期</th><th>风险</th><th>备注</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>采购需求</th><th>来源BOM</th><th>项目</th><th>供应商</th><th>状态</th><th>订单号</th><th>预计交期</th><th>风险</th><th>备注</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
           </section>
 
           <section class="panel compact-section">

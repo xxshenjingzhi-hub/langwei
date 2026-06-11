@@ -1,4 +1,4 @@
-const STORAGE_KEY = "langwei-project-management-v1";
+const STORAGE_KEY = "langwei-project-management-v2";
 
 const seedData = {
   projects: [
@@ -37,12 +37,12 @@ const seedData = {
     }
   ],
   tasks: [
-    { id: "t1", projectId: "p1", name: "需求说明书", type: "整体设计", priority: "P0", status: "进行中", owner: "莫亮", due: "2026-05-09" },
-    { id: "t2", projectId: "p1", name: "机械结构 BOM", type: "整体设计", priority: "P0", status: "已完成", owner: "任志雄", due: "2026-05-28" },
-    { id: "t3", projectId: "p1", name: "软件研发：功能、算法", type: "软件算法研发", priority: "P1", status: "进行中", owner: "倪磊", due: "2026-06-26" },
-    { id: "t4", projectId: "p2", name: "结构设计", type: "整体设计", priority: "P0", status: "进行中", owner: "黄辉", due: "2026-06-20" },
-    { id: "t5", projectId: "p2", name: "里程碑：完成物料采购", type: "物料采购", priority: "P0", status: "进行中", owner: "莫亮", due: "2026-07-31" },
-    { id: "t6", projectId: "p3", name: "第一、二台硬件组装", type: "组装调试", priority: "P0", status: "未开始", owner: "黄辉", due: "2026-06-22" }
+    { id: "t1", projectId: "p1", name: "需求说明书", type: "设计", priority: "P0", status: "进行中", owner: "莫亮", due: "2026-05-09" },
+    { id: "t2", projectId: "p1", name: "机械结构 BOM", type: "设计", priority: "P0", status: "已完成", owner: "任志雄", due: "2026-05-28" },
+    { id: "t3", projectId: "p1", name: "软件研发：功能、算法", type: "设计", priority: "P1", status: "进行中", owner: "倪磊", due: "2026-06-26" },
+    { id: "t4", projectId: "p2", name: "结构设计", type: "设计", priority: "P0", status: "进行中", owner: "黄辉", due: "2026-06-20" },
+    { id: "t5", projectId: "p2", name: "里程碑：完成物料采购", type: "采购", priority: "P0", status: "进行中", owner: "莫亮", due: "2026-07-31" },
+    { id: "t6", projectId: "p3", name: "第一、二台硬件组装", type: "组装", priority: "P0", status: "未开始", owner: "黄辉", due: "2026-06-22" }
   ],
   materials: [
     { id: "m1", projectId: "p1", name: "海康工业相机", spec: "2500W 相机", detail: "部分相机已发货，需跟进 CXP 线", quantity: 2, unit: "台", requiredDate: "2026-06-20", requester: "倪磊" },
@@ -87,6 +87,15 @@ function projectName(projectId) {
 
 function purchaseName(purchaseId) {
   return state.purchases.find((purchase) => purchase.id === purchaseId)?.item || "未关联采购项";
+}
+
+function materialById(materialId) {
+  return state.materials.find((material) => material.id === materialId);
+}
+
+function materialName(materialId) {
+  const material = materialById(materialId);
+  return material ? `${material.name} ${material.spec ? `（${material.spec}）` : ""}` : "未关联BOM";
 }
 
 function pct(numerator, denominator) {
@@ -186,9 +195,13 @@ function renderProjects() {
       <td>${project.owner}</td>
       <td>${project.internalDue || "-"}</td>
       <td><div class="completion"><div class="mini-track"><span style="width:${completion}%"></span></div>${fmtPercent(completion)}</div></td>
+      <td><div class="action-bar">
+        <button class="text-button" data-action="edit-project" data-id="${project.id}">编辑</button>
+        <button class="text-button danger" data-action="delete-project" data-id="${project.id}">删除</button>
+      </div></td>
     </tr>`;
   });
-  $("#projectRows").innerHTML = rows.join("") || emptyRow(7);
+  $("#projectRows").innerHTML = rows.join("") || emptyRow(8);
 }
 
 function renderTasks() {
@@ -213,13 +226,15 @@ function renderMaterials() {
     <td>${item.quantity || "-"} ${item.unit || ""}</td>
     <td>${item.requiredDate || "-"}</td>
     <td>${item.requester || "-"}</td>
+    <td><button class="text-button" data-action="create-purchase" data-id="${item.id}">生成采购需求</button></td>
   </tr>`);
-  $("#materialRows").innerHTML = rows.join("") || emptyRow(7);
+  $("#materialRows").innerHTML = rows.join("") || emptyRow(8);
 }
 
 function renderPurchases() {
   const rows = filtered(state.purchases, [(item) => item.item, (item) => item.supplier, (item) => projectName(item.projectId), (item) => item.status]).map((item) => `<tr>
     <td><strong>${item.item}</strong></td>
+    <td>${materialName(item.materialId)}</td>
     <td>${projectName(item.projectId)}</td>
     <td>${item.supplier || "-"}</td>
     <td>${badge(item.status)}</td>
@@ -228,7 +243,7 @@ function renderPurchases() {
     <td>${badge(item.risk || "正常")}</td>
     <td>${item.remark || "-"}</td>
   </tr>`);
-  $("#purchaseRows").innerHTML = rows.join("") || emptyRow(8);
+  $("#purchaseRows").innerHTML = rows.join("") || emptyRow(9);
 }
 
 function renderReceipts() {
@@ -276,18 +291,24 @@ function purchaseOptions(selected = "") {
   return state.purchases.map((purchase) => `<option value="${purchase.id}" ${purchase.id === selected ? "selected" : ""}>${purchase.item}</option>`).join("");
 }
 
-function openDialog(id) {
+function materialOptions(selected = "") {
+  return state.materials
+    .map((material) => `<option value="${material.id}" ${material.id === selected ? "selected" : ""}>${projectName(material.projectId)} / ${material.name} ${material.spec ? `（${material.spec}）` : ""}</option>`)
+    .join("");
+}
+
+function openDialog(id, defaults = {}) {
   const dialog = $(`#${id}`);
-  dialog.innerHTML = dialogTemplate(id);
+  dialog.innerHTML = dialogTemplate(id, defaults);
   dialog.showModal();
   dialog.querySelector("form").addEventListener("submit", handleSubmit);
   dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
 }
 
-function dialogTemplate(id) {
+function dialogTemplate(id, defaults = {}) {
   const map = {
     projectDialog: {
-      title: "新增项目",
+      title: defaults.id ? "编辑项目" : "新增项目",
       target: "projects",
       fields: [
         ["name", "项目名称", "text"],
@@ -306,7 +327,7 @@ function dialogTemplate(id) {
       fields: [
         ["projectId", "所属项目", "project"],
         ["name", "任务名称", "text"],
-        ["type", "任务类型", "select", ["整体设计", "软件算法研发", "物料采购", "组装调试", "设备交付"]],
+        ["type", "任务类型", "select", ["设计", "采购", "组装", "交付"]],
         ["priority", "优先级", "select", ["P0", "P1", "P2"]],
         ["status", "状态", "select", ["未开始", "进行中", "阻塞", "待验收", "已完成", "取消"]],
         ["owner", "负责人", "text"],
@@ -314,7 +335,7 @@ function dialogTemplate(id) {
       ]
     },
     materialDialog: {
-      title: "新增物料需求",
+      title: "新增BOM物料",
       target: "materials",
       fields: [
         ["projectId", "所属项目", "project"],
@@ -328,10 +349,10 @@ function dialogTemplate(id) {
       ]
     },
     purchaseDialog: {
-      title: "新增采购项",
+      title: "新增采购需求",
       target: "purchases",
       fields: [
-        ["projectId", "所属项目", "project"],
+        ["materialId", "来源BOM物料", "material"],
         ["item", "采购项", "text"],
         ["supplier", "供应商", "text"],
         ["status", "采购状态", "select", ["待询价", "待下单", "已下单", "已入库", "异常", "取消"]],
@@ -358,8 +379,8 @@ function dialogTemplate(id) {
   const config = map[id];
   return `<div class="dialog-body">
     <h3>${config.title}</h3>
-    <form data-target="${config.target}">
-      <div class="form-grid">${config.fields.map(fieldTemplate).join("")}</div>
+    <form data-target="${config.target}" data-id="${defaults.id || ""}">
+      <div class="form-grid">${config.fields.map((field) => fieldTemplate(field, defaults)).join("")}</div>
       <div class="dialog-actions">
         <button type="button" class="ghost-button" data-close>取消</button>
         <button type="submit" class="primary-button">保存</button>
@@ -368,21 +389,25 @@ function dialogTemplate(id) {
   </div>`;
 }
 
-function fieldTemplate([name, label, type, options]) {
+function fieldTemplate([name, label, type, options], defaults = {}) {
   const full = type === "textarea" ? " full" : "";
+  const value = defaults[name] ?? "";
   if (type === "select") {
-    return `<label class="${full}">${label}<select name="${name}">${options.map((option) => `<option>${option}</option>`).join("")}</select></label>`;
+    return `<label class="${full}">${label}<select name="${name}">${options.map((option) => `<option ${option === value ? "selected" : ""}>${option}</option>`).join("")}</select></label>`;
   }
   if (type === "project") {
-    return `<label>${label}<select name="${name}">${projectOptions()}</select></label>`;
+    return `<label>${label}<select name="${name}">${projectOptions(value)}</select></label>`;
+  }
+  if (type === "material") {
+    return `<label class="full">${label}<select name="${name}">${materialOptions(value)}</select></label>`;
   }
   if (type === "purchase") {
-    return `<label>${label}<select name="${name}">${purchaseOptions()}</select></label>`;
+    return `<label>${label}<select name="${name}">${purchaseOptions(value)}</select></label>`;
   }
   if (type === "textarea") {
-    return `<label class="${full}">${label}<textarea name="${name}" rows="3"></textarea></label>`;
+    return `<label class="${full}">${label}<textarea name="${name}" rows="3">${value}</textarea></label>`;
   }
-  return `<label>${label}<input name="${name}" type="${type}" /></label>`;
+  return `<label>${label}<input name="${name}" type="${type}" value="${value}" /></label>`;
 }
 
 function handleSubmit(event) {
@@ -390,13 +415,29 @@ function handleSubmit(event) {
   const form = event.currentTarget;
   const target = form.dataset.target;
   const data = Object.fromEntries(new FormData(form).entries());
-  data.id = `${target.slice(0, 2)}${Date.now()}`;
+  const editingId = form.dataset.id;
+
+  if (target === "purchases") {
+    const material = materialById(data.materialId);
+    if (material) {
+      data.projectId = material.projectId;
+      data.item = data.item || material.name;
+      data.remark = data.remark || `来源BOM：${material.name}${material.spec ? ` / ${material.spec}` : ""}`;
+    }
+  }
 
   if (target === "purchases" && data.status === "已入库") {
     data.risk = data.risk || "正常";
   }
 
-  state[target].push(data);
+  if (editingId) {
+    const index = state[target].findIndex((item) => item.id === editingId);
+    if (index >= 0) state[target][index] = { ...state[target][index], ...data, id: editingId };
+  } else {
+    data.id = `${target.slice(0, 2)}${Date.now()}`;
+    state[target].push(data);
+  }
+
   if (target === "receipts") {
     const purchase = state.purchases.find((item) => item.id === data.purchaseId);
     if (purchase && data.status === "已入库") purchase.status = "已入库";
@@ -404,6 +445,35 @@ function handleSubmit(event) {
   saveState();
   form.closest("dialog").close();
   render();
+}
+
+function deleteProject(projectId) {
+  const project = state.projects.find((item) => item.id === projectId);
+  if (!project) return;
+  const ok = window.confirm(`确认删除项目「${project.name}」？关联任务、BOM、采购需求和入库记录也会一起删除。`);
+  if (!ok) return;
+  const materialIds = state.materials.filter((item) => item.projectId === projectId).map((item) => item.id);
+  const purchaseIds = state.purchases
+    .filter((item) => item.projectId === projectId || materialIds.includes(item.materialId))
+    .map((item) => item.id);
+  state.projects = state.projects.filter((item) => item.id !== projectId);
+  state.tasks = state.tasks.filter((item) => item.projectId !== projectId);
+  state.materials = state.materials.filter((item) => item.projectId !== projectId);
+  state.purchases = state.purchases.filter((item) => !purchaseIds.includes(item.id));
+  state.receipts = state.receipts.filter((item) => !purchaseIds.includes(item.purchaseId));
+  saveState();
+  render();
+}
+
+function createPurchaseFromMaterial(materialId) {
+  const material = materialById(materialId);
+  if (!material) return;
+  openDialog("purchaseDialog", {
+    materialId,
+    item: material.name,
+    expectedDelivery: material.requiredDate,
+    remark: `来源BOM：${material.name}${material.spec ? ` / ${material.spec}` : ""}`
+  });
 }
 
 function bindEvents() {
@@ -418,6 +488,18 @@ function bindEvents() {
 
   $$("[data-dialog]").forEach((button) => {
     button.addEventListener("click", () => openDialog(button.dataset.dialog));
+  });
+
+  document.addEventListener("click", (event) => {
+    const actionButton = event.target.closest("[data-action]");
+    if (!actionButton) return;
+    const { action, id } = actionButton.dataset;
+    if (action === "edit-project") {
+      const project = state.projects.find((item) => item.id === id);
+      if (project) openDialog("projectDialog", project);
+    }
+    if (action === "delete-project") deleteProject(id);
+    if (action === "create-purchase") createPurchaseFromMaterial(id);
   });
 
   $("#globalSearch").addEventListener("input", (event) => {

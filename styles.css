@@ -189,6 +189,25 @@ textarea {
   color: #24405f;
 }
 
+.action-bar {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
+}
+
+.text-button.danger {
+  color: var(--red);
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -496,7 +515,7 @@ dialog::backdrop {
   }
 
   .nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .nav-item {
