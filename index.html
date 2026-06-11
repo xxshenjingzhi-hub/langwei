@@ -18,7 +18,7 @@
         </div>
         <nav class="nav" aria-label="主导航">
           <button class="nav-item active" data-view="projects">项目管理</button>
-          <button class="nav-item" data-view="procurement">采购</button>
+          <button class="nav-item" data-view="procurement">采购管理</button>
           <button class="nav-item" data-view="receipts">入库管理</button>
           <button class="nav-item" data-view="settings">系统设置</button>
         </nav>
@@ -152,12 +152,30 @@
               <button class="primary-button" id="saveSettings">保存设置</button>
             </div>
             <div class="settings-grid">
-              <label>项目类型<textarea id="settingProjectTypes" rows="5"></textarea></label>
-              <label>任务类型<textarea id="settingTaskTypes" rows="5"></textarea></label>
-              <label>项目状态<textarea id="settingProjectStatuses" rows="5"></textarea></label>
-              <label>采购状态<textarea id="settingPurchaseStatuses" rows="5"></textarea></label>
-              <label>入库状态<textarea id="settingReceiptStatuses" rows="5"></textarea></label>
-              <label>供应商名称<textarea id="settingSuppliers" rows="5"></textarea></label>
+              <label class="setting-card">
+                <span><strong>项目类型</strong><small>用于新增和编辑项目时选择</small></span>
+                <textarea id="settingProjectTypes" rows="5"></textarea>
+              </label>
+              <label class="setting-card">
+                <span><strong>任务类型</strong><small>项目任务分类，当前按设计、采购、组装、交付管理</small></span>
+                <textarea id="settingTaskTypes" rows="5"></textarea>
+              </label>
+              <label class="setting-card">
+                <span><strong>项目状态</strong><small>用于项目列表筛选和项目当前状态维护</small></span>
+                <textarea id="settingProjectStatuses" rows="5"></textarea>
+              </label>
+              <label class="setting-card">
+                <span><strong>采购状态</strong><small>用于采购任务从待询价到已入库的状态维护</small></span>
+                <textarea id="settingPurchaseStatuses" rows="5"></textarea>
+              </label>
+              <label class="setting-card">
+                <span><strong>入库状态</strong><small>用于记录到货、部分入库、已入库和异常情况</small></span>
+                <textarea id="settingReceiptStatuses" rows="5"></textarea>
+              </label>
+              <label class="setting-card">
+                <span><strong>供应商名称</strong><small>用于采购任务中的供应商下拉选择</small></span>
+                <textarea id="settingSuppliers" rows="5"></textarea>
+              </label>
             </div>
           </section>
         </section>

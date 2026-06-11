@@ -511,7 +511,7 @@ function setView(view) {
   $$(".view").forEach((pane) => pane.classList.toggle("active-view", pane.id === view));
   const titles = {
     projects: ["项目管理", "查看项目列表、项目状态，并维护项目详情"],
-    procurement: ["采购", "按项目筛选采购任务，查看采购任务详情"],
+    procurement: ["采购管理", "按项目筛选采购任务，查看采购任务详情"],
     receipts: ["入库管理", "记录采购到货、入库数量、入库状态和质检描述"],
     settings: ["系统设置", "维护项目类型、任务类型、状态、供应商等下拉选项"]
   };
