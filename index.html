@@ -17,10 +17,9 @@
           </div>
         </div>
         <nav class="nav" aria-label="主导航">
-          <button class="nav-item active" data-view="overview">项目管理</button>
-          <button class="nav-item" data-view="tasks">项目任务</button>
-          <button class="nav-item" data-view="materials">项目BOM</button>
+          <button class="nav-item active" data-view="projects">项目管理</button>
           <button class="nav-item" data-view="procurement">采购管理</button>
+          <button class="nav-item" data-view="settings">系统设置</button>
         </nav>
         <div class="scope-note">
           <span>当前版本</span>
@@ -31,11 +30,11 @@
       <main class="main">
         <header class="topbar">
           <div>
-            <h1>项目管理</h1>
-            <p>实时查看项目、任务、采购与入库进度</p>
+            <h1 id="pageTitle">项目管理</h1>
+            <p id="pageSubtitle">查看项目列表、项目状态，并维护项目详情</p>
           </div>
           <div class="topbar-actions">
-            <input id="globalSearch" type="search" placeholder="搜索项目、物料、供应商" />
+            <input id="globalSearch" type="search" placeholder="搜索项目、采购、供应商" />
             <button id="resetData" class="ghost-button">恢复示例数据</button>
           </div>
         </header>
@@ -44,10 +43,10 @@
           <article class="kpi-card">
             <span>项目总数</span>
             <strong id="projectCount">0</strong>
-            <small id="activeProjectCount">推进中 0</small>
+            <small id="activeProjectCount">进行中 0</small>
           </article>
           <article class="kpi-card">
-            <span>整体任务完成度</span>
+            <span>任务完成度</span>
             <strong id="taskCompletion">0%</strong>
             <small id="taskSummary">0 / 0 已完成</small>
           </article>
@@ -63,85 +62,32 @@
           </article>
         </section>
 
-        <section id="overview" class="view active-view">
-          <div class="content-grid">
-            <section class="panel project-panel">
-              <div class="panel-header">
-                <div>
-                  <h2>项目清单</h2>
-                  <p>项目编号手动输入，项目类型限定为 RD / SP</p>
-                </div>
-                <button class="primary-button" data-dialog="projectDialog">新增项目</button>
+        <section id="projects" class="view active-view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>项目列表</h2>
+                <p>块状排布，可按全部、进行中、已结束分类查看</p>
               </div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>项目名称</th>
-                      <th>编号</th>
-                      <th>类型</th>
-                      <th>状态</th>
-                      <th>负责人</th>
-                      <th>内部截止</th>
-                      <th>完成度</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="projectRows"></tbody>
-                </table>
-              </div>
-            </section>
-
-            <aside class="panel procurement-panel">
-              <div class="panel-header compact">
-                <div>
-                  <h2>物料采购进度</h2>
-                  <p>按采购项统计，不按数量统计</p>
-                </div>
-              </div>
-              <div class="procurement-stats">
-                <div>
-                  <span>采购项总数</span>
-                  <strong id="purchaseTotal">0</strong>
-                </div>
-                <div>
-                  <span>待下单</span>
-                  <strong id="pendingOrder">0</strong>
-                </div>
-                <div>
-                  <span>已入库</span>
-                  <strong id="storedItems">0</strong>
-                </div>
-                <div>
-                  <span>待交付</span>
-                  <strong id="deliveryPending">0</strong>
-                </div>
-              </div>
-              <div class="progress-block">
-                <div class="progress-label">
-                  <span>下单完成度</span>
-                  <strong id="orderProgressLabel">0%</strong>
-                </div>
-                <div class="progress-track"><div id="orderProgressBar"></div></div>
-              </div>
-              <div class="progress-block">
-                <div class="progress-label">
-                  <span>入库完成度</span>
-                  <strong id="stockProgressLabel">0%</strong>
-                </div>
-                <div class="progress-track teal"><div id="stockProgressBar"></div></div>
-              </div>
-              <div class="risk-list" id="riskList"></div>
-            </aside>
-          </div>
+              <button class="primary-button" data-dialog="projectDialog">新增项目</button>
+            </div>
+            <div class="filter-bar" aria-label="项目状态筛选">
+              <button class="filter-chip active" data-project-filter="all">全部</button>
+              <button class="filter-chip" data-project-filter="active">进行中</button>
+              <button class="filter-chip" data-project-filter="ended">已结束</button>
+            </div>
+            <div id="projectCards" class="project-card-grid"></div>
+          </section>
 
           <section class="panel compact-section" id="projectDetail">
             <div class="panel-header">
               <div>
                 <h2 id="detailProjectName">项目详情</h2>
-                <p id="detailProjectMeta">点击项目列表中的项目查看详情</p>
+                <p id="detailProjectMeta">点击项目卡片查看项目概览、任务、BOM 和采购记录</p>
               </div>
               <div class="action-bar">
+                <button class="ghost-button" id="detailAddTask" type="button">新增任务</button>
+                <button class="ghost-button" id="detailAddMaterial" type="button">添加BOM物料</button>
                 <button class="ghost-button" id="detailEditProject" type="button">编辑项目</button>
                 <button class="ghost-button danger-button" id="detailDeleteProject" type="button">删除项目</button>
               </div>
@@ -165,53 +111,80 @@
           </section>
         </section>
 
-        <section id="tasks" class="view">
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>项目任务</h2>
-                <p>任务分为设计、采购、组装、交付四大类</p>
-              </div>
-              <button class="primary-button" data-dialog="taskDialog">新增任务</button>
-            </div>
-            <div class="table-wrap"><table><thead><tr><th>任务</th><th>所属项目</th><th>类型</th><th>优先级</th><th>状态</th><th>负责人</th><th>截止时间</th></tr></thead><tbody id="taskRows"></tbody></table></div>
-          </section>
-        </section>
-
-        <section id="materials" class="view">
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>项目BOM</h2>
-                <p>BOM 是采购需求来源，可关联 BOM 物料项生成采购需求</p>
-              </div>
-              <button class="primary-button" data-dialog="materialDialog">新增BOM物料</button>
-            </div>
-            <div class="table-wrap"><table><thead><tr><th>物料名称</th><th>项目</th><th>规格型号</th><th>明细描述</th><th>数量</th><th>需求日期</th><th>需求人</th><th>操作</th></tr></thead><tbody id="materialRows"></tbody></table></div>
-          </section>
-        </section>
-
         <section id="procurement" class="view">
           <section class="panel">
             <div class="panel-header">
               <div>
-                <h2>采购管理</h2>
-                <p>采购需求来源于项目BOM；待交付 = 已下单未入库</p>
+                <h2>采购任务列表</h2>
+                <p>采购任务来源于项目 BOM，可按项目筛选并查看采购任务详情</p>
               </div>
-              <button class="primary-button" data-dialog="purchaseDialog">新增采购需求</button>
+              <button class="primary-button" data-dialog="purchaseDialog">新增采购任务</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>采购需求</th><th>来源BOM</th><th>项目</th><th>供应商</th><th>状态</th><th>订单号</th><th>预计交期</th><th>风险</th><th>备注</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+            <div class="toolbar-row">
+              <label>项目筛选
+                <select id="purchaseProjectFilter"></select>
+              </label>
+            </div>
+            <div class="content-grid procurement-grid">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>采购任务</th>
+                      <th>项目</th>
+                      <th>来源BOM</th>
+                      <th>供应商</th>
+                      <th>状态</th>
+                      <th>预计交期</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="purchaseRows"></tbody>
+                </table>
+              </div>
+              <aside class="detail-side">
+                <h3 id="purchaseDetailTitle">采购任务详情</h3>
+                <div id="purchaseDetailBody" class="purchase-detail-body">点击采购任务查看详情</div>
+              </aside>
+            </div>
           </section>
 
           <section class="panel compact-section">
             <div class="panel-header">
               <div>
                 <h2>入库记录</h2>
-                <p>质检仅作为描述字段，不参与入库流程</p>
+                <p>入库属于采购的一部分，质检仅作为描述字段</p>
               </div>
               <button class="primary-button" data-dialog="receiptDialog">新增入库</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>采购项</th><th>到货日期</th><th>到货数量</th><th>入库数量</th><th>入库状态</th><th>质检描述</th><th>异常说明</th></tr></thead><tbody id="receiptRows"></tbody></table></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>采购任务</th><th>到货日期</th><th>到货数量</th><th>入库数量</th><th>入库状态</th><th>质检描述</th><th>异常说明</th></tr>
+                </thead>
+                <tbody id="receiptRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="settings" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>系统设置</h2>
+                <p>维护系统下拉选项，每行一个选项</p>
+              </div>
+              <button class="primary-button" id="saveSettings">保存设置</button>
+            </div>
+            <div class="settings-grid">
+              <label>项目类型<textarea id="settingProjectTypes" rows="5"></textarea></label>
+              <label>任务类型<textarea id="settingTaskTypes" rows="5"></textarea></label>
+              <label>项目状态<textarea id="settingProjectStatuses" rows="5"></textarea></label>
+              <label>采购状态<textarea id="settingPurchaseStatuses" rows="5"></textarea></label>
+              <label>入库状态<textarea id="settingReceiptStatuses" rows="5"></textarea></label>
+              <label>供应商名称<textarea id="settingSuppliers" rows="5"></textarea></label>
+            </div>
           </section>
         </section>
       </main>
