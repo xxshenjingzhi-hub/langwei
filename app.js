@@ -124,25 +124,6 @@ function projectCompletion(projectId) {
   return pct(tasks.filter((task) => task.status === "已完成").length, tasks.length);
 }
 
-function metrics() {
-  const effectiveTasks = state.tasks.filter((task) => task.status !== "取消");
-  const doneTasks = effectiveTasks.filter((task) => task.status === "已完成").length;
-  const effectivePurchases = state.purchases.filter((purchase) => purchase.status !== "取消");
-  const total = effectivePurchases.length;
-  const pendingOrder = effectivePurchases.filter((purchase) => ["待询价", "待下单"].includes(purchase.status)).length;
-  const stored = effectivePurchases.filter((purchase) => purchase.status === "已入库").length;
-  return {
-    total,
-    pendingOrder,
-    stored,
-    orderCompletion: pct(total - pendingOrder, total),
-    stockCompletion: pct(stored, total),
-    doneTasks,
-    totalTasks: effectiveTasks.length,
-    taskCompletion: pct(doneTasks, effectiveTasks.length)
-  };
-}
-
 function projectDetailData(projectId) {
   const project = state.projects.find((item) => item.id === projectId);
   const tasks = state.tasks.filter((item) => item.projectId === projectId && item.status !== "取消");
@@ -156,18 +137,6 @@ function projectDetailData(projectId) {
   const deliveryPending = purchases.filter((item) => item.status === "已下单").length;
   const nearestDelivery = purchases.filter((item) => item.status !== "已入库" && item.expectedDelivery).map((item) => item.expectedDelivery).sort()[0];
   return { project, tasks, bom, purchases, receipts, doneTasks, taskCompletion: pct(doneTasks, tasks.length), stored, pendingOrder, deliveryPending, nearestDelivery };
-}
-
-function renderKpis() {
-  const data = metrics();
-  $("#projectCount").textContent = state.projects.length;
-  $("#activeProjectCount").textContent = `进行中 ${state.projects.filter(isActiveProject).length}`;
-  $("#taskCompletion").textContent = fmtPercent(data.taskCompletion);
-  $("#taskSummary").textContent = `${data.doneTasks} / ${data.totalTasks} 已完成`;
-  $("#orderCompletion").textContent = fmtPercent(data.orderCompletion);
-  $("#orderSummary").textContent = `待下单 ${data.pendingOrder} 项`;
-  $("#stockCompletion").textContent = fmtPercent(data.stockCompletion);
-  $("#stockSummary").textContent = `已入库 ${data.stored} 项`;
 }
 
 function renderProjectCards() {
@@ -226,13 +195,6 @@ function renderProjectDetail() {
   const { project } = data;
   $("#detailProjectName").textContent = project.name;
   $("#detailProjectMeta").textContent = `${project.code} · ${project.type} · ${project.status} · 负责人：${project.owner || "未填写"}`;
-  $("#detailTaskCompletion").textContent = fmtPercent(data.taskCompletion);
-  $("#detailTaskCount").textContent = `${data.doneTasks} / ${data.tasks.length} 已完成`;
-  $("#detailBomCount").textContent = data.bom.length;
-  $("#detailPurchaseCount").textContent = data.purchases.length;
-  $("#detailPurchaseStatus").textContent = `待下单 ${data.pendingOrder}`;
-  $("#detailStoredCount").textContent = data.stored;
-  $("#detailDeliveryPending").textContent = `待交付 ${data.deliveryPending}`;
 
   $("#detailOverview").innerHTML = `
     <div class="detail-summary">
@@ -341,7 +303,6 @@ function emptyRow(cols) {
 }
 
 function render() {
-  renderKpis();
   renderProjectCards();
   renderProjectDetail();
   renderPurchaseFilter();
@@ -550,7 +511,8 @@ function setView(view) {
   $$(".view").forEach((pane) => pane.classList.toggle("active-view", pane.id === view));
   const titles = {
     projects: ["项目管理", "查看项目列表、项目状态，并维护项目详情"],
-    procurement: ["采购管理", "按项目筛选采购任务，查看采购任务详情和入库记录"],
+    procurement: ["采购", "按项目筛选采购任务，查看采购任务详情"],
+    receipts: ["入库", "记录采购到货、入库数量、入库状态和质检描述"],
     settings: ["系统设置", "维护项目类型、任务类型、状态、供应商等下拉选项"]
   };
   $("#pageTitle").textContent = titles[view][0];

@@ -18,7 +18,8 @@
         </div>
         <nav class="nav" aria-label="主导航">
           <button class="nav-item active" data-view="projects">项目管理</button>
-          <button class="nav-item" data-view="procurement">采购管理</button>
+          <button class="nav-item" data-view="procurement">采购</button>
+          <button class="nav-item" data-view="receipts">入库</button>
           <button class="nav-item" data-view="settings">系统设置</button>
         </nav>
         <div class="scope-note">
@@ -38,29 +39,6 @@
             <button id="resetData" class="ghost-button">恢复示例数据</button>
           </div>
         </header>
-
-        <section class="kpi-grid" aria-label="关键指标">
-          <article class="kpi-card">
-            <span>项目总数</span>
-            <strong id="projectCount">0</strong>
-            <small id="activeProjectCount">进行中 0</small>
-          </article>
-          <article class="kpi-card">
-            <span>任务完成度</span>
-            <strong id="taskCompletion">0%</strong>
-            <small id="taskSummary">0 / 0 已完成</small>
-          </article>
-          <article class="kpi-card accent">
-            <span>采购下单完成度</span>
-            <strong id="orderCompletion">0%</strong>
-            <small id="orderSummary">待下单 0 项</small>
-          </article>
-          <article class="kpi-card">
-            <span>入库完成度</span>
-            <strong id="stockCompletion">0%</strong>
-            <small id="stockSummary">已入库 0 项</small>
-          </article>
-        </section>
 
         <section id="projects" class="view active-view">
           <section class="panel">
@@ -91,12 +69,6 @@
                 <button class="ghost-button" id="detailEditProject" type="button">编辑项目</button>
                 <button class="ghost-button danger-button" id="detailDeleteProject" type="button">删除项目</button>
               </div>
-            </div>
-            <div class="detail-kpis">
-              <article><span>任务完成度</span><strong id="detailTaskCompletion">0%</strong><small id="detailTaskCount">0 / 0 已完成</small></article>
-              <article><span>BOM 物料项</span><strong id="detailBomCount">0</strong><small>可生成采购需求</small></article>
-              <article><span>采购需求</span><strong id="detailPurchaseCount">0</strong><small id="detailPurchaseStatus">待下单 0</small></article>
-              <article><span>已入库</span><strong id="detailStoredCount">0</strong><small id="detailDeliveryPending">待交付 0</small></article>
             </div>
             <div class="detail-tabs" role="tablist" aria-label="项目详情">
               <button class="detail-tab active" data-detail-tab="overview">项目概览</button>
@@ -148,8 +120,10 @@
               </aside>
             </div>
           </section>
+        </section>
 
-          <section class="panel compact-section">
+        <section id="receipts" class="view">
+          <section class="panel">
             <div class="panel-header">
               <div>
                 <h2>入库记录</h2>
