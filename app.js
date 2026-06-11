@@ -238,19 +238,21 @@ function renderPurchases() {
         <td><button class="text-button" data-action="select-purchase" data-id="${item.id}">详情</button></td>
       </tr>`)
       .join("") || emptyRow(7);
-  renderPurchaseDetail();
 }
 
-function renderPurchaseDetail() {
-  const purchase = state.purchases.find((item) => item.id === selectedPurchaseId);
-  if (!purchase) {
-    $("#purchaseDetailTitle").textContent = "采购任务详情";
-    $("#purchaseDetailBody").innerHTML = "点击采购任务查看详情";
-    return;
-  }
+function openPurchaseDetail(purchaseId) {
+  const purchase = state.purchases.find((item) => item.id === purchaseId);
+  if (!purchase) return;
   const receiptRows = state.receipts.filter((item) => item.purchaseId === purchase.id);
-  $("#purchaseDetailTitle").textContent = purchase.item;
-  $("#purchaseDetailBody").innerHTML = `
+  const dialog = $("#purchaseDetailDialog");
+  dialog.innerHTML = `<div class="dialog-body detail-dialog-body">
+    <div class="dialog-title-row">
+      <div>
+        <h3>${purchase.item}</h3>
+        <p>${projectName(purchase.projectId)} · ${materialName(purchase.materialId)}</p>
+      </div>
+      <button type="button" class="ghost-button" data-close>关闭</button>
+    </div>
     <dl class="detail-list">
       <dt>所属项目</dt><dd>${projectName(purchase.projectId)}</dd>
       <dt>来源BOM</dt><dd>${materialName(purchase.materialId)}</dd>
@@ -262,7 +264,9 @@ function renderPurchaseDetail() {
       <dt>备注</dt><dd>${purchase.remark || "-"}</dd>
       <dt>入库记录</dt><dd>${receiptRows.length ? receiptRows.map((item) => `${item.arrivalDate || "-"} / ${item.status} / 入库 ${item.storedQty || "-"}`).join("<br>") : "暂无入库记录"}</dd>
     </dl>
-  `;
+  </div>`;
+  dialog.showModal();
+  dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
 }
 
 function renderReceipts() {
@@ -560,6 +564,7 @@ function bindEvents() {
     if (action === "select-purchase") {
       selectedPurchaseId = id;
       renderPurchases();
+      openPurchaseDetail(id);
     }
   });
 
