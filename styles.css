@@ -205,6 +205,11 @@ textarea:focus {
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
+.small-button {
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
 .primary-button {
   background: var(--blue);
   color: #fff;
@@ -594,7 +599,7 @@ td {
 
 .setting-card {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -603,27 +608,58 @@ td {
   box-shadow: 0 10px 28px rgba(17, 24, 39, 0.04);
 }
 
-.setting-card span {
-  display: grid;
-  gap: 5px;
+.setting-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .setting-card strong {
+  display: block;
   color: var(--text);
   font-size: 15px;
 }
 
 .setting-card small {
+  display: block;
+  margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
-.setting-card textarea {
-  min-height: 136px;
-  resize: vertical;
-  line-height: 1.6;
-  background: #fbfcfe;
+.setting-option-list {
+  display: grid;
+  gap: 9px;
+}
+
+.setting-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.setting-option span {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.setting-option-actions {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.compact-empty {
+  padding: 18px;
   font-size: 13px;
 }
 

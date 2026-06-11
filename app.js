@@ -51,6 +51,22 @@ let selectedPurchaseId = state.purchases[0]?.id || "";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const settingSections = [
+  { key: "projectTypes", title: "项目类型", desc: "用于新增和编辑项目时选择" },
+  { key: "taskTypes", title: "任务类型", desc: "项目任务分类，当前按设计、采购、组装、交付管理" },
+  { key: "projectStatuses", title: "项目状态", desc: "用于项目列表筛选和项目当前状态维护" },
+  { key: "purchaseStatuses", title: "采购状态", desc: "用于采购任务从待询价到已入库的状态维护" },
+  { key: "receiptStatuses", title: "入库状态", desc: "用于记录到货、部分入库、已入库和异常情况" },
+  { key: "suppliers", title: "供应商名称", desc: "用于采购任务中的供应商下拉选择" }
+];
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -283,18 +299,29 @@ function renderReceipts() {
 }
 
 function renderSettings() {
-  const map = {
-    settingProjectTypes: "projectTypes",
-    settingTaskTypes: "taskTypes",
-    settingProjectStatuses: "projectStatuses",
-    settingPurchaseStatuses: "purchaseStatuses",
-    settingReceiptStatuses: "receiptStatuses",
-    settingSuppliers: "suppliers"
-  };
-  Object.entries(map).forEach(([id, key]) => {
-    const el = $(`#${id}`);
-    if (el && document.activeElement !== el) el.value = state.settings[key].join("\n");
-  });
+  $("#settingsGrid").innerHTML = settingSections
+    .map((section) => {
+      const options = state.settings[section.key] || [];
+      return `<section class="setting-card">
+        <div class="setting-card-head">
+          <div>
+            <strong>${section.title}</strong>
+            <small>${section.desc}</small>
+          </div>
+          <button class="ghost-button small-button" data-action="add-setting-option" data-key="${section.key}">新增选项</button>
+        </div>
+        <div class="setting-option-list">
+          ${options.map((option, index) => `<div class="setting-option">
+            <span>${escapeHtml(option)}</span>
+            <div class="setting-option-actions">
+              <button class="text-button" data-action="edit-setting-option" data-key="${section.key}" data-index="${index}">编辑</button>
+              <button class="text-button danger" data-action="delete-setting-option" data-key="${section.key}" data-index="${index}">删除</button>
+            </div>
+          </div>`).join("") || `<div class="empty-state compact-empty">暂无选项</div>`}
+        </div>
+      </section>`;
+    })
+    .join("");
 }
 
 function detailTable(headers, rows) {
@@ -492,19 +519,55 @@ function createPurchaseFromMaterial(materialId) {
   openDialog("purchaseDialog", { materialId, item: material.name, expectedDelivery: material.requiredDate, remark: `来源BOM：${material.name}${material.spec ? ` / ${material.spec}` : ""}` });
 }
 
-function saveSettings() {
-  const map = {
-    settingProjectTypes: "projectTypes",
-    settingTaskTypes: "taskTypes",
-    settingProjectStatuses: "projectStatuses",
-    settingPurchaseStatuses: "purchaseStatuses",
-    settingReceiptStatuses: "receiptStatuses",
-    settingSuppliers: "suppliers"
-  };
-  Object.entries(map).forEach(([id, key]) => {
-    const values = $(`#${id}`).value.split("\n").map((item) => item.trim()).filter(Boolean);
-    if (values.length) state.settings[key] = values;
-  });
+function settingSectionTitle(key) {
+  return settingSections.find((section) => section.key === key)?.title || "配置项";
+}
+
+function openSettingOptionDialog(key, index = "") {
+  const dialog = $("#settingOptionDialog");
+  const isEdit = index !== "";
+  const value = isEdit ? state.settings[key][Number(index)] : "";
+  dialog.innerHTML = `<div class="dialog-body">
+    <h3>${isEdit ? "编辑" : "新增"}${settingSectionTitle(key)}</h3>
+    <form data-setting-key="${key}" data-setting-index="${index}">
+      <div class="form-grid">
+        <label class="full">选项名称<input name="value" type="text" value="${escapeHtml(value)}" required /></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="ghost-button" data-close>取消</button>
+        <button type="submit" class="primary-button">保存</button>
+      </div>
+    </form>
+  </div>`;
+  dialog.showModal();
+  dialog.querySelector("form").addEventListener("submit", handleSettingOptionSubmit);
+  dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
+}
+
+function handleSettingOptionSubmit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const key = form.dataset.settingKey;
+  const index = form.dataset.settingIndex;
+  const value = new FormData(form).get("value").trim();
+  if (!value) return;
+  if (!state.settings[key]) state.settings[key] = [];
+  if (index === "") {
+    state.settings[key].push(value);
+  } else {
+    state.settings[key][Number(index)] = value;
+  }
+  saveState();
+  form.closest("dialog").close();
+  render();
+}
+
+function deleteSettingOption(key, index) {
+  const value = state.settings[key]?.[Number(index)];
+  if (!value) return;
+  const ok = window.confirm(`确认删除「${value}」？`);
+  if (!ok) return;
+  state.settings[key].splice(Number(index), 1);
   saveState();
   render();
 }
@@ -566,6 +629,9 @@ function bindEvents() {
       renderPurchases();
       openPurchaseDetail(id);
     }
+    if (action === "add-setting-option") openSettingOptionDialog(actionButton.dataset.key);
+    if (action === "edit-setting-option") openSettingOptionDialog(actionButton.dataset.key, actionButton.dataset.index);
+    if (action === "delete-setting-option") deleteSettingOption(actionButton.dataset.key, actionButton.dataset.index);
   });
 
   $("#globalSearch").addEventListener("input", (event) => {
@@ -576,7 +642,6 @@ function bindEvents() {
     purchaseProjectFilter = event.target.value;
     renderPurchases();
   });
-  $("#saveSettings").addEventListener("click", saveSettings);
   $("#resetData").addEventListener("click", () => {
     state = structuredClone(seedData);
     selectedProjectId = state.projects[0]?.id || "";
