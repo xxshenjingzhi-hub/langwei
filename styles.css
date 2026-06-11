@@ -189,6 +189,10 @@ textarea {
   color: #24405f;
 }
 
+.danger-button {
+  color: var(--red);
+}
+
 .action-bar {
   display: flex;
   gap: 8px;
@@ -206,6 +210,16 @@ textarea {
 
 .text-button.danger {
   color: var(--red);
+}
+
+.project-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 800;
+  text-align: left;
 }
 
 .kpi-grid {
@@ -321,6 +335,10 @@ th {
 
 td {
   color: #24364c;
+}
+
+.selected-row td {
+  background: #f1f6ff;
 }
 
 .status {
@@ -453,6 +471,95 @@ td {
   font-size: 12px;
 }
 
+.detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-kpis article,
+.detail-summary div {
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.detail-kpis span,
+.detail-kpis small,
+.detail-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.detail-kpis strong {
+  display: block;
+  margin: 8px 0 6px;
+  font-size: 24px;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+.detail-tab {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 11px 12px;
+  font-weight: 700;
+  border-bottom: 2px solid transparent;
+}
+
+.detail-tab.active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+
+.detail-pane {
+  display: none;
+}
+
+.active-detail-pane {
+  display: block;
+}
+
+.detail-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.detail-summary strong {
+  display: block;
+  margin-top: 8px;
+}
+
+.detail-text {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.detail-table table {
+  min-width: 680px;
+}
+
+.empty-state {
+  padding: 26px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+  background: var(--surface-soft);
+}
+
 dialog {
   width: min(620px, calc(100vw - 32px));
   border: 0;
@@ -524,7 +631,9 @@ dialog::backdrop {
   }
 
   .kpi-grid,
-  .content-grid {
+  .content-grid,
+  .detail-kpis,
+  .detail-summary {
     grid-template-columns: 1fr;
   }
 }

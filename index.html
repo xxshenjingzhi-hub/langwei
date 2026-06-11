@@ -134,12 +134,41 @@
               <div class="risk-list" id="riskList"></div>
             </aside>
           </div>
+
+          <section class="panel compact-section" id="projectDetail">
+            <div class="panel-header">
+              <div>
+                <h2 id="detailProjectName">项目详情</h2>
+                <p id="detailProjectMeta">点击项目列表中的项目查看详情</p>
+              </div>
+              <div class="action-bar">
+                <button class="ghost-button" id="detailEditProject" type="button">编辑项目</button>
+                <button class="ghost-button danger-button" id="detailDeleteProject" type="button">删除项目</button>
+              </div>
+            </div>
+            <div class="detail-kpis">
+              <article><span>任务完成度</span><strong id="detailTaskCompletion">0%</strong><small id="detailTaskCount">0 / 0 已完成</small></article>
+              <article><span>BOM 物料项</span><strong id="detailBomCount">0</strong><small>可生成采购需求</small></article>
+              <article><span>采购需求</span><strong id="detailPurchaseCount">0</strong><small id="detailPurchaseStatus">待下单 0</small></article>
+              <article><span>已入库</span><strong id="detailStoredCount">0</strong><small id="detailDeliveryPending">待交付 0</small></article>
+            </div>
+            <div class="detail-tabs" role="tablist" aria-label="项目详情">
+              <button class="detail-tab active" data-detail-tab="overview">项目概览</button>
+              <button class="detail-tab" data-detail-tab="tasks">项目任务</button>
+              <button class="detail-tab" data-detail-tab="bom">项目BOM</button>
+              <button class="detail-tab" data-detail-tab="purchases">采购记录</button>
+            </div>
+            <div id="detailOverview" class="detail-pane active-detail-pane"></div>
+            <div id="detailTasks" class="detail-pane"></div>
+            <div id="detailBom" class="detail-pane"></div>
+            <div id="detailPurchases" class="detail-pane"></div>
+          </section>
         </section>
 
         <section id="tasks" class="view">
           <section class="panel">
             <div class="panel-header">
-                <div>
+              <div>
                 <h2>项目任务</h2>
                 <p>任务分为设计、采购、组装、交付四大类</p>
               </div>

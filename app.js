@@ -63,6 +63,8 @@ const seedData = {
 let state = loadState();
 let currentView = "overview";
 let searchTerm = "";
+let selectedProjectId = state.projects[0]?.id || "";
+let selectedDetailTab = "overview";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -187,8 +189,8 @@ function renderProjects() {
     (item) => item.status
   ]).map((project) => {
     const completion = projectCompletion(project.id);
-    return `<tr>
-      <td><strong>${project.name}</strong><br><small>${project.summary || ""}</small></td>
+    return `<tr class="${project.id === selectedProjectId ? "selected-row" : ""}">
+      <td><button class="project-link" data-action="select-project" data-id="${project.id}">${project.name}</button><br><small>${project.summary || ""}</small></td>
       <td>${project.code}</td>
       <td>${project.type}</td>
       <td>${badge(project.status)}</td>
@@ -269,6 +271,102 @@ function renderRisks() {
   $("#riskList").innerHTML = risks.map((risk) => `<div class="risk-item"><strong>${risk.title}</strong><span>${risk.text}</span></div>`).join("");
 }
 
+function projectDetailData(projectId) {
+  const project = state.projects.find((item) => item.id === projectId);
+  const tasks = state.tasks.filter((item) => item.projectId === projectId && item.status !== "取消");
+  const bom = state.materials.filter((item) => item.projectId === projectId);
+  const bomIds = bom.map((item) => item.id);
+  const purchases = state.purchases.filter((item) => item.projectId === projectId || bomIds.includes(item.materialId));
+  const doneTasks = tasks.filter((item) => item.status === "已完成").length;
+  const stored = purchases.filter((item) => item.status === "已入库").length;
+  const pendingOrder = purchases.filter((item) => ["待询价", "待下单"].includes(item.status)).length;
+  const deliveryPending = purchases.filter((item) => item.status === "已下单").length;
+  const nearestDelivery = purchases
+    .filter((item) => item.status !== "已入库" && item.expectedDelivery)
+    .map((item) => item.expectedDelivery)
+    .sort()[0];
+  return { project, tasks, bom, purchases, doneTasks, taskCompletion: pct(doneTasks, tasks.length), stored, pendingOrder, deliveryPending, nearestDelivery };
+}
+
+function renderProjectDetail() {
+  if (!state.projects.length) {
+    selectedProjectId = "";
+    $("#detailProjectName").textContent = "项目详情";
+    $("#detailProjectMeta").textContent = "暂无项目，请先新增项目";
+    $("#detailOverview").innerHTML = "";
+    $("#detailTasks").innerHTML = "";
+    $("#detailBom").innerHTML = "";
+    $("#detailPurchases").innerHTML = "";
+    return;
+  }
+
+  if (!state.projects.some((project) => project.id === selectedProjectId)) {
+    selectedProjectId = state.projects[0].id;
+  }
+
+  const data = projectDetailData(selectedProjectId);
+  const { project } = data;
+  $("#detailProjectName").textContent = project.name;
+  $("#detailProjectMeta").textContent = `${project.code} · ${project.type} · ${project.status} · 负责人：${project.owner || "未填写"}`;
+  $("#detailTaskCompletion").textContent = fmtPercent(data.taskCompletion);
+  $("#detailTaskCount").textContent = `${data.doneTasks} / ${data.tasks.length} 已完成`;
+  $("#detailBomCount").textContent = data.bom.length;
+  $("#detailPurchaseCount").textContent = data.purchases.length;
+  $("#detailPurchaseStatus").textContent = `待下单 ${data.pendingOrder}`;
+  $("#detailStoredCount").textContent = data.stored;
+  $("#detailDeliveryPending").textContent = `待交付 ${data.deliveryPending}`;
+  $("#detailEditProject").dataset.id = project.id;
+  $("#detailDeleteProject").dataset.id = project.id;
+
+  $("#detailOverview").innerHTML = `
+    <div class="detail-summary">
+      <div><span>项目状态</span>${badge(project.status)}</div>
+      <div><span>内部截止</span><strong>${project.internalDue || "-"}</strong></div>
+      <div><span>外部截止</span><strong>${project.externalDue || "-"}</strong></div>
+      <div><span>最近采购交期</span><strong>${data.nearestDelivery || "-"}</strong></div>
+    </div>
+    <p class="detail-text">${project.summary || "暂无项目情况概述"}</p>
+  `;
+  $("#detailTasks").innerHTML = detailTable(
+    ["任务", "类型", "优先级", "状态", "负责人", "截止时间"],
+    data.tasks.map((task) => [task.name, task.type, task.priority, badge(task.status), task.owner || "-", task.due || "-"])
+  );
+  $("#detailBom").innerHTML = detailTable(
+    ["物料名称", "规格型号", "明细描述", "数量", "需求日期", "操作"],
+    data.bom.map((item) => [
+      item.name,
+      item.spec || "-",
+      item.detail || "-",
+      `${item.quantity || "-"} ${item.unit || ""}`,
+      item.requiredDate || "-",
+      `<button class="text-button" data-action="create-purchase" data-id="${item.id}">生成采购需求</button>`
+    ])
+  );
+  $("#detailPurchases").innerHTML = detailTable(
+    ["采购需求", "来源BOM", "供应商", "状态", "订单号", "预计交期", "风险"],
+    data.purchases.map((purchase) => [
+      purchase.item,
+      materialName(purchase.materialId),
+      purchase.supplier || "-",
+      badge(purchase.status),
+      purchase.poNumber || "-",
+      purchase.expectedDelivery || "-",
+      badge(purchase.risk || "正常")
+    ])
+  );
+
+  $$(".detail-tab").forEach((button) => button.classList.toggle("active", button.dataset.detailTab === selectedDetailTab));
+  $$(".detail-pane").forEach((pane) => pane.classList.remove("active-detail-pane"));
+  $(`#detail${selectedDetailTab[0].toUpperCase()}${selectedDetailTab.slice(1)}`).classList.add("active-detail-pane");
+}
+
+function detailTable(headers, rows) {
+  if (!rows.length) return `<div class="empty-state">暂无数据</div>`;
+  return `<div class="table-wrap detail-table"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${rows
+    .map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
+    .join("")}</tbody></table></div>`;
+}
+
 function emptyRow(cols) {
   return `<tr><td colspan="${cols}">暂无数据</td></tr>`;
 }
@@ -281,6 +379,7 @@ function render() {
   renderPurchases();
   renderReceipts();
   renderRisks();
+  renderProjectDetail();
 }
 
 function projectOptions(selected = "") {
@@ -461,6 +560,7 @@ function deleteProject(projectId) {
   state.materials = state.materials.filter((item) => item.projectId !== projectId);
   state.purchases = state.purchases.filter((item) => !purchaseIds.includes(item.id));
   state.receipts = state.receipts.filter((item) => !purchaseIds.includes(item.purchaseId));
+  if (selectedProjectId === projectId) selectedProjectId = state.projects[0]?.id || "";
   saveState();
   render();
 }
@@ -492,8 +592,28 @@ function bindEvents() {
 
   document.addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-action]");
-    if (!actionButton) return;
+    const detailTab = event.target.closest("[data-detail-tab]");
+    if (detailTab) {
+      selectedDetailTab = detailTab.dataset.detailTab;
+      renderProjectDetail();
+      return;
+    }
+
+    if (!actionButton) {
+      if (event.target.id === "detailEditProject" && selectedProjectId) {
+        const project = state.projects.find((item) => item.id === selectedProjectId);
+        if (project) openDialog("projectDialog", project);
+      }
+      if (event.target.id === "detailDeleteProject" && selectedProjectId) deleteProject(selectedProjectId);
+      return;
+    }
+
     const { action, id } = actionButton.dataset;
+    if (action === "select-project") {
+      selectedProjectId = id;
+      selectedDetailTab = "overview";
+      render();
+    }
     if (action === "edit-project") {
       const project = state.projects.find((item) => item.id === id);
       if (project) openDialog("projectDialog", project);
