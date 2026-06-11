@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>郎蔚光学项目管理系统</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">LW</div>
+          <div>
+            <strong>郎蔚光学</strong>
+            <span>项目管理系统</span>
+          </div>
+        </div>
+        <nav class="nav" aria-label="主导航">
+          <button class="nav-item active" data-view="overview">项目总览</button>
+          <button class="nav-item" data-view="tasks">项目任务</button>
+          <button class="nav-item" data-view="materials">物料需求</button>
+          <button class="nav-item" data-view="procurement">采购管理</button>
+          <button class="nav-item" data-view="receipts">入库记录</button>
+        </nav>
+        <div class="scope-note">
+          <span>当前版本</span>
+          <strong>MVP · 项目负责人统一维护</strong>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1>项目总览</h1>
+            <p>实时查看项目、任务、采购与入库进度</p>
+          </div>
+          <div class="topbar-actions">
+            <input id="globalSearch" type="search" placeholder="搜索项目、物料、供应商" />
+            <button id="resetData" class="ghost-button">恢复示例数据</button>
+          </div>
+        </header>
+
+        <section class="kpi-grid" aria-label="关键指标">
+          <article class="kpi-card">
+            <span>项目总数</span>
+            <strong id="projectCount">0</strong>
+            <small id="activeProjectCount">推进中 0</small>
+          </article>
+          <article class="kpi-card">
+            <span>整体任务完成度</span>
+            <strong id="taskCompletion">0%</strong>
+            <small id="taskSummary">0 / 0 已完成</small>
+          </article>
+          <article class="kpi-card accent">
+            <span>采购下单完成度</span>
+            <strong id="orderCompletion">0%</strong>
+            <small id="orderSummary">待下单 0 项</small>
+          </article>
+          <article class="kpi-card">
+            <span>入库完成度</span>
+            <strong id="stockCompletion">0%</strong>
+            <small id="stockSummary">已入库 0 项</small>
+          </article>
+        </section>
+
+        <section id="overview" class="view active-view">
+          <div class="content-grid">
+            <section class="panel project-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>项目清单</h2>
+                  <p>项目编号手动输入，项目类型限定为 RD / SP</p>
+                </div>
+                <button class="primary-button" data-dialog="projectDialog">新增项目</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>项目名称</th>
+                      <th>编号</th>
+                      <th>类型</th>
+                      <th>状态</th>
+                      <th>负责人</th>
+                      <th>内部截止</th>
+                      <th>完成度</th>
+                    </tr>
+                  </thead>
+                  <tbody id="projectRows"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <aside class="panel procurement-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2>物料采购进度</h2>
+                  <p>按采购项统计，不按数量统计</p>
+                </div>
+              </div>
+              <div class="procurement-stats">
+                <div>
+                  <span>采购项总数</span>
+                  <strong id="purchaseTotal">0</strong>
+                </div>
+                <div>
+                  <span>待下单</span>
+                  <strong id="pendingOrder">0</strong>
+                </div>
+                <div>
+                  <span>已入库</span>
+                  <strong id="storedItems">0</strong>
+                </div>
+                <div>
+                  <span>待交付</span>
+                  <strong id="deliveryPending">0</strong>
+                </div>
+              </div>
+              <div class="progress-block">
+                <div class="progress-label">
+                  <span>下单完成度</span>
+                  <strong id="orderProgressLabel">0%</strong>
+                </div>
+                <div class="progress-track"><div id="orderProgressBar"></div></div>
+              </div>
+              <div class="progress-block">
+                <div class="progress-label">
+                  <span>入库完成度</span>
+                  <strong id="stockProgressLabel">0%</strong>
+                </div>
+                <div class="progress-track teal"><div id="stockProgressBar"></div></div>
+              </div>
+              <div class="risk-list" id="riskList"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="tasks" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>项目任务</h2>
+                <p>按任务类型统计整体设计、软件算法研发、物料采购、组装调试、设备交付</p>
+              </div>
+              <button class="primary-button" data-dialog="taskDialog">新增任务</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>任务</th><th>所属项目</th><th>类型</th><th>优先级</th><th>状态</th><th>负责人</th><th>截止时间</th></tr></thead><tbody id="taskRows"></tbody></table></div>
+          </section>
+        </section>
+
+        <section id="materials" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>物料需求</h2>
+                <p>逐条新增物料，物料明细描述用于记录用途、关键参数和特殊要求</p>
+              </div>
+              <button class="primary-button" data-dialog="materialDialog">新增物料</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>物料名称</th><th>项目</th><th>规格型号</th><th>明细描述</th><th>数量</th><th>需求日期</th><th>需求人</th></tr></thead><tbody id="materialRows"></tbody></table></div>
+          </section>
+        </section>
+
+        <section id="procurement" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>采购管理</h2>
+                <p>待交付 = 已下单未入库；采购进度按采购项统计</p>
+              </div>
+              <button class="primary-button" data-dialog="purchaseDialog">新增采购项</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>采购项</th><th>项目</th><th>供应商</th><th>状态</th><th>订单号</th><th>预计交期</th><th>风险</th><th>备注</th></tr></thead><tbody id="purchaseRows"></tbody></table></div>
+          </section>
+        </section>
+
+        <section id="receipts" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>入库记录</h2>
+                <p>质检仅作为描述字段，不参与入库流程</p>
+              </div>
+              <button class="primary-button" data-dialog="receiptDialog">新增入库</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>采购项</th><th>到货日期</th><th>到货数量</th><th>入库数量</th><th>入库状态</th><th>质检描述</th><th>异常说明</th></tr></thead><tbody id="receiptRows"></tbody></table></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="projectDialog"></dialog>
+    <dialog id="taskDialog"></dialog>
+    <dialog id="materialDialog"></dialog>
+    <dialog id="purchaseDialog"></dialog>
+    <dialog id="receiptDialog"></dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
