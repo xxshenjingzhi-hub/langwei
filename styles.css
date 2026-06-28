@@ -38,25 +38,30 @@ textarea {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-rows: auto 1fr;
 }
 
 .sidebar {
   background: rgba(255, 255, 255, 0.94);
-  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   color: var(--text);
-  padding: 28px 16px;
+  padding: 14px 34px;
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  gap: 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(16px);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 8px 20px;
-  border-bottom: 1px solid var(--line);
+  padding: 0;
+  border-bottom: 0;
+  flex: 0 0 auto;
 }
 
 .brand-mark {
@@ -89,15 +94,17 @@ textarea {
 }
 
 .nav {
-  display: grid;
+  display: flex;
   gap: 6px;
+  align-items: center;
+  flex: 1 1 auto;
 }
 
 .nav-item {
   border: 1px solid transparent;
-  width: 100%;
-  text-align: left;
-  padding: 12px 14px;
+  width: auto;
+  text-align: center;
+  padding: 10px 14px;
   border-radius: 8px;
   background: transparent;
   color: #455468;
@@ -115,11 +122,12 @@ textarea {
 }
 
 .scope-note {
-  margin-top: auto;
-  padding: 16px;
+  margin-left: auto;
+  padding: 10px 12px;
   border-radius: 8px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
+  flex: 0 0 auto;
 }
 
 .scope-note span,
@@ -133,8 +141,8 @@ textarea {
 }
 
 .scope-note strong {
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 3px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -165,10 +173,40 @@ textarea {
   color: var(--muted);
 }
 
+.topbar-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.page-back-action {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.topbar-back {
+  width: 38px;
+  height: 38px;
+  margin-top: 1px;
+  color: #213753;
+  box-shadow: none;
+}
+
 .topbar-actions {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 input,
@@ -251,6 +289,56 @@ textarea:focus {
   color: var(--red);
 }
 
+.icon-button {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--blue);
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.08);
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.icon-button:hover {
+  background: var(--blue-soft);
+  border-color: #c9dcff;
+  transform: translateY(-1px);
+}
+
+.icon-button.danger {
+  color: var(--red);
+}
+
+.icon-button.danger:hover {
+  background: #fff1f0;
+  border-color: #ffd4d1;
+}
+
+.icon-button.subtle {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.icon-button.subtle:hover {
+  background: var(--surface-soft);
+}
+
+.icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .project-link {
   border: 0;
   padding: 0;
@@ -270,6 +358,10 @@ textarea:focus {
 
 .view {
   display: none;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .active-view {
@@ -346,6 +438,12 @@ th {
 
 td {
   color: #24364c;
+}
+
+.muted-cell {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .selected-row td {
@@ -446,6 +544,13 @@ td {
   display: block;
 }
 
+.detail-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .detail-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -464,8 +569,349 @@ td {
   line-height: 1.7;
 }
 
+.overview-dashboard {
+  display: grid;
+  gap: 16px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  min-height: 110px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+}
+
+.metric-card span,
+.metric-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-card strong {
+  display: block;
+  margin: 12px 0 10px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.metric-card strong .status {
+  vertical-align: middle;
+}
+
+.dashboard-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-block {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dashboard-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dashboard-block-head strong {
+  font-size: 14px;
+}
+
+.dashboard-block-head span {
+  color: var(--blue);
+  font-weight: 800;
+}
+
+.wide-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4ebf3;
+}
+
+.wide-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.dashboard-block p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.chart-card {
+  min-height: 220px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.chart-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.chart-title h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.chart-title span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 13px;
+}
+
+.bar-row {
+  display: grid;
+  gap: 7px;
+}
+
+.bar-row-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #24364c;
+  font-size: 12px;
+}
+
+.bar-row-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-row-meta strong {
+  color: var(--text);
+}
+
+.bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4ebf3;
+}
+
+.bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #164a9f, #2b63bd);
+}
+
+.donut-wrap {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.donut-chart {
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  position: relative;
+}
+
+.donut-chart::after {
+  content: "";
+  position: absolute;
+  inset: 17px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.donut-chart div {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.donut-chart strong {
+  font-size: 20px;
+}
+
+.donut-chart span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 9px;
+}
+
+.chart-legend.horizontal {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chart-legend div {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #24364c;
+  font-size: 12px;
+}
+
+.chart-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.chart-legend span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend strong {
+  color: var(--text);
+}
+
+.stack-chart {
+  display: grid;
+  gap: 18px;
+}
+
+.stack-track {
+  height: 44px;
+  display: flex;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e4ebf3;
+}
+
+.stack-track span {
+  min-width: 0;
+}
+
+.dashboard-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-list {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dashboard-list h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.dashboard-list-body {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-list-row:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-list-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.dashboard-list-row span {
+  grid-column: 1 / 2;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-list-row .status {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+  justify-self: end;
+}
+
+.project-brief {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.project-brief span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.project-brief p {
+  margin: 0;
+  color: #24364c;
+  line-height: 1.7;
+}
+
 .detail-table table {
-  min-width: 680px;
+  min-width: 1120px;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .empty-state {
@@ -693,6 +1139,14 @@ dialog::backdrop {
   background: rgba(15, 23, 42, 0.38);
 }
 
+#purchaseDetailDialog {
+  width: min(1120px, calc(100vw - 48px));
+}
+
+#receiptDetailDialog {
+  width: min(980px, calc(100vw - 48px));
+}
+
 .dialog-body {
   padding: 22px;
 }
@@ -724,6 +1178,18 @@ dialog::backdrop {
   font-size: 13px;
 }
 
+.detail-section {
+  margin-top: 22px;
+}
+
+.section-label {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -750,23 +1216,23 @@ dialog::backdrop {
 
 @media (max-width: 1100px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 3;
     padding: 14px;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
-  .brand,
   .scope-note {
     display: none;
   }
 
   .nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex: 1 1 100%;
+    overflow-x: auto;
   }
 
   .nav-item {
@@ -776,6 +1242,10 @@ dialog::backdrop {
 
   .content-grid,
   .detail-summary,
+  .metric-grid,
+  .dashboard-progress-grid,
+  .dashboard-chart-grid,
+  .dashboard-two-col,
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -808,5 +1278,14 @@ dialog::backdrop {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .donut-wrap,
+  .chart-legend.horizontal {
+    grid-template-columns: 1fr;
+  }
+
+  .donut-chart {
+    margin: 0 auto;
   }
 }

@@ -30,25 +30,21 @@
 
       <main class="main">
         <header class="topbar">
-          <div>
-            <h1 id="pageTitle">项目管理</h1>
-            <p id="pageSubtitle">查看项目列表、项目状态，并维护项目详情</p>
+          <div class="topbar-title-row">
+            <div id="pageBackAction" class="page-back-action"></div>
+            <div>
+              <h1 id="pageTitle">项目管理</h1>
+              <p id="pageSubtitle">查看项目列表、项目状态，并维护项目详情</p>
+            </div>
           </div>
           <div class="topbar-actions">
             <input id="globalSearch" type="search" placeholder="搜索项目、采购、供应商" />
-            <button id="resetData" class="ghost-button">恢复示例数据</button>
+            <div id="pageActions" class="page-actions"></div>
           </div>
         </header>
 
         <section id="projects" class="view active-view">
           <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>项目列表</h2>
-                <p>块状排布，可按全部、进行中、已结束分类查看</p>
-              </div>
-              <button class="primary-button" data-dialog="projectDialog">新增项目</button>
-            </div>
             <div class="filter-bar" aria-label="项目状态筛选">
               <button class="filter-chip active" data-project-filter="all">全部</button>
               <button class="filter-chip" data-project-filter="active">进行中</button>
@@ -56,42 +52,27 @@
             </div>
             <div id="projectCards" class="project-card-grid"></div>
           </section>
+        </section>
 
-          <section class="panel compact-section" id="projectDetail">
-            <div class="panel-header">
-              <div>
-                <h2 id="detailProjectName">项目详情</h2>
-                <p id="detailProjectMeta">点击项目卡片查看项目概览、任务、BOM 和采购记录</p>
-              </div>
-              <div class="action-bar">
-                <button class="ghost-button" id="detailAddTask" type="button">新增任务</button>
-                <button class="ghost-button" id="detailAddMaterial" type="button">添加BOM物料</button>
-                <button class="ghost-button" id="detailEditProject" type="button">编辑项目</button>
-                <button class="ghost-button danger-button" id="detailDeleteProject" type="button">删除项目</button>
-              </div>
-            </div>
+        <section id="projectDetailPage" class="view">
+          <section class="panel" id="projectDetail">
             <div class="detail-tabs" role="tablist" aria-label="项目详情">
               <button class="detail-tab active" data-detail-tab="overview">项目概览</button>
               <button class="detail-tab" data-detail-tab="tasks">项目任务</button>
-              <button class="detail-tab" data-detail-tab="bom">项目BOM</button>
+              <button class="detail-tab" data-detail-tab="bom">项目 BOM 表</button>
               <button class="detail-tab" data-detail-tab="purchases">采购记录</button>
+              <button class="detail-tab" data-detail-tab="receipts">入库记录</button>
             </div>
             <div id="detailOverview" class="detail-pane active-detail-pane"></div>
             <div id="detailTasks" class="detail-pane"></div>
             <div id="detailBom" class="detail-pane"></div>
             <div id="detailPurchases" class="detail-pane"></div>
+            <div id="detailReceipts" class="detail-pane"></div>
           </section>
         </section>
 
         <section id="procurement" class="view">
           <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>采购任务列表</h2>
-                <p>采购任务来源于项目 BOM，可按项目筛选并查看采购任务详情</p>
-              </div>
-              <button class="primary-button" data-dialog="purchaseDialog">新增采购任务</button>
-            </div>
             <div class="toolbar-row">
               <label>项目筛选
                 <select id="purchaseProjectFilter"></select>
@@ -101,12 +82,13 @@
               <table>
                 <thead>
                   <tr>
-                    <th>采购任务</th>
+                    <th>采购编号</th>
+                    <th>采购名称</th>
                     <th>项目</th>
-                    <th>来源BOM</th>
                     <th>供应商</th>
                     <th>状态</th>
-                    <th>预计交期</th>
+                    <th>预计到货</th>
+                    <th>采购明细</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -118,17 +100,15 @@
 
         <section id="receipts" class="view">
           <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>入库管理</h2>
-                <p>入库属于采购的一部分，质检仅作为描述字段</p>
-              </div>
-              <button class="primary-button" data-dialog="receiptDialog">新增入库</button>
+            <div class="toolbar-row">
+              <label>项目筛选
+                <select id="receiptProjectFilter"></select>
+              </label>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
-                  <tr><th>采购任务</th><th>到货日期</th><th>到货数量</th><th>入库数量</th><th>入库状态</th><th>质检描述</th><th>异常说明</th></tr>
+                  <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>供应商</th><th>采购数量</th><th>已入库</th><th>未入库数量</th><th>入库状态</th><th>操作</th></tr>
                 </thead>
                 <tbody id="receiptRows"></tbody>
               </table>
@@ -138,12 +118,6 @@
 
         <section id="settings" class="view">
           <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>系统设置</h2>
-                <p>维护系统下拉选项，每个选项都支持新增、编辑和删除</p>
-              </div>
-            </div>
             <div id="settingsGrid" class="settings-grid"></div>
           </section>
         </section>
@@ -155,6 +129,8 @@
     <dialog id="materialDialog"></dialog>
     <dialog id="purchaseDialog"></dialog>
     <dialog id="purchaseDetailDialog"></dialog>
+    <dialog id="purchaseItemDialog"></dialog>
+    <dialog id="receiptDetailDialog"></dialog>
     <dialog id="receiptDialog"></dialog>
     <dialog id="settingOptionDialog"></dialog>
 
