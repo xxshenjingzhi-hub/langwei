@@ -17,10 +17,10 @@
           </div>
         </div>
         <nav class="nav" aria-label="主导航">
-          <button class="nav-item active" data-view="projects">项目管理</button>
+          <button class="nav-item active" data-view="dashboard">首页</button>
+          <button class="nav-item" data-view="projects">项目管理</button>
           <button class="nav-item" data-view="procurement">采购管理</button>
-          <button class="nav-item" data-view="receipts">入库管理</button>
-          <button class="nav-item" data-view="outbounds">出库管理</button>
+          <button class="nav-item" data-view="inventory">出入库管理</button>
           <button class="nav-item" data-view="settings">系统设置</button>
         </nav>
         <div class="scope-note">
@@ -34,8 +34,12 @@
           <div class="topbar-title-row">
             <div id="pageBackAction" class="page-back-action"></div>
             <div>
-              <h1 id="pageTitle">项目管理</h1>
-              <p id="pageSubtitle">查看项目列表、项目状态，并维护项目详情</p>
+              <h1 id="pageTitle">首页</h1>
+              <p id="pageSubtitle">项目经营驾驶舱，关注进度、风险、采购和库存</p>
+              <div id="inventoryPageTabs" class="page-subtabs hidden" role="tablist" aria-label="出入库管理">
+                <button class="page-subtab active" data-inventory-tab="receipts">入库记录</button>
+                <button class="page-subtab" data-inventory-tab="outbounds">出库记录</button>
+              </div>
             </div>
           </div>
           <div class="topbar-actions">
@@ -44,7 +48,11 @@
           </div>
         </header>
 
-        <section id="projects" class="view active-view">
+        <section id="dashboard" class="view active-view">
+          <div id="homeDashboard" class="overview-dashboard"></div>
+        </section>
+
+        <section id="projects" class="view">
           <section class="panel">
             <div class="filter-bar" aria-label="项目状态筛选">
               <button class="filter-chip active" data-project-filter="all">全部</button>
@@ -101,38 +109,38 @@
           </section>
         </section>
 
-        <section id="receipts" class="view">
+        <section id="inventory" class="view">
           <section class="panel">
-            <div class="toolbar-row">
-              <label>项目筛选
-                <select id="receiptProjectFilter"></select>
-              </label>
+            <div id="inventoryReceipts" class="inventory-pane active-inventory-pane">
+              <div class="section-title-row compact-filter-row">
+                <label>项目筛选
+                  <select id="receiptProjectFilter"></select>
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>供应商</th><th>采购数量</th><th>已入库</th><th>未入库数量</th><th>入库状态</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="receiptRows"></tbody>
+                </table>
+              </div>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>供应商</th><th>采购数量</th><th>已入库</th><th>未入库数量</th><th>入库状态</th><th>操作</th></tr>
-                </thead>
-                <tbody id="receiptRows"></tbody>
-              </table>
-            </div>
-          </section>
-        </section>
 
-        <section id="outbounds" class="view">
-          <section class="panel">
-            <div class="toolbar-row">
-              <label>项目筛选
-                <select id="outboundProjectFilter"></select>
-              </label>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>已入库</th><th>已出库</th><th>当前库存</th><th>最近出库</th><th>出库状态</th><th>操作</th></tr>
-                </thead>
-                <tbody id="outboundRows"></tbody>
-              </table>
+            <div id="inventoryOutbounds" class="inventory-pane">
+              <div class="section-title-row compact-filter-row">
+                <label>项目筛选
+                  <select id="outboundProjectFilter"></select>
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>已入库</th><th>已出库</th><th>当前库存</th><th>最近出库</th><th>出库状态</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="outboundRows"></tbody>
+                </table>
+              </div>
             </div>
           </section>
         </section>

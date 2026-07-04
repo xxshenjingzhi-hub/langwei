@@ -52,7 +52,7 @@ const seedData = {
 };
 
 let state = loadState();
-let currentView = "projects";
+let currentView = "dashboard";
 let searchTerm = "";
 let projectFilter = "all";
 let selectedProjectId = state.projects[0]?.id || "";
@@ -60,6 +60,7 @@ let selectedDetailTab = "overview";
 let purchaseProjectFilter = "all";
 let receiptProjectFilter = "all";
 let outboundProjectFilter = "all";
+let inventoryTab = "receipts";
 let selectedPurchaseId = state.purchases[0]?.id || "";
 
 const $ = (selector) => document.querySelector(selector);
@@ -464,6 +465,31 @@ function durationDays(start, end) {
   return `${Math.floor((endDate - startDate) / 86400000) + 1}天`;
 }
 
+function todayString() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateDiffDays(date, anchor = todayString()) {
+  if (!date) return null;
+  const target = new Date(`${date}T00:00:00`);
+  const base = new Date(`${anchor}T00:00:00`);
+  if (Number.isNaN(target.getTime()) || Number.isNaN(base.getTime())) return null;
+  return Math.floor((target - base) / 86400000);
+}
+
+function isWithinNextDays(date, days, anchor = todayString()) {
+  const diff = dateDiffDays(date, anchor);
+  return diff !== null && diff >= 0 && diff <= days;
+}
+
+function isSameMonth(date, anchor = todayString()) {
+  return Boolean(date && date.slice(0, 7) === anchor.slice(0, 7));
+}
+
 function isEndedProject(project) {
   return ["已结束", "已交付", "已关闭", "取消"].includes(project.status);
 }
@@ -574,6 +600,109 @@ function projectDashboardStats(data) {
   };
 }
 
+function systemDashboardStats() {
+  const today = todayString();
+  const activeProjects = state.projects.filter(isActiveProject);
+  const endedProjects = state.projects.filter(isEndedProject);
+  const overdueTasks = state.tasks.filter((item) => item.due && item.due < today && !["已完成", "取消"].includes(item.status));
+  const upcomingTasks = state.tasks
+    .filter((item) => item.due && isWithinNextDays(item.due, 14, today) && !["已完成", "取消"].includes(item.status))
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .slice(0, 6);
+  const purchaseDone = state.purchases.filter((item) => item.status === "已到货").length;
+  const activePurchases = state.purchases.filter((item) => !["已到货", "取消"].includes(item.status));
+  const overduePurchases = activePurchases.filter((item) => item.expectedDelivery && item.expectedDelivery < today);
+  const abnormalPurchases = state.purchases.filter((item) => item.status === "异常" || item.riskRemark);
+  const upcomingPurchases = activePurchases
+    .filter((item) => item.expectedDelivery && isWithinNextDays(item.expectedDelivery, 14, today))
+    .sort((a, b) => a.expectedDelivery.localeCompare(b.expectedDelivery))
+    .slice(0, 6);
+  const monthlyDeliveryProjects = state.projects.filter((item) => isSameMonth(item.externalDue, today));
+  const projectRows = state.projects
+    .map((project) => ({ label: project.name, value: projectCompletion(project.id), project }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
+  const purchaseStatusRows = rowsFromCounts(countBy(state.purchases, (item) => item.status || "未填写"), state.settings.purchaseStatuses);
+  const projectStatusRows = rowsFromCounts(countBy(state.projects, (item) => item.status || "未填写"), state.settings.projectStatuses);
+  const storedQty = state.receipts.reduce((sum, item) => sum + safeNumber(item.storedQty), 0);
+  const issuedQty = state.outbounds.reduce((sum, item) => sum + safeNumber(item.issuedQty), 0);
+  const stockQty = Math.max(storedQty - issuedQty, 0);
+  const purchaseAmount = state.purchases.reduce((sum, item) => sum + safeNumber(purchaseTaskAmount(item)), 0);
+  const riskItems = [];
+
+  overdueTasks.forEach((task) => {
+    riskItems.push({
+      level: "高",
+      type: "任务逾期",
+      projectId: task.projectId,
+      object: task.name,
+      owner: task.owner || "-",
+      date: task.due,
+      desc: `计划截止已超过 ${Math.abs(dateDiffDays(task.due, today) || 0)} 天`
+    });
+  });
+  overduePurchases.forEach((purchase) => {
+    riskItems.push({
+      level: "高",
+      type: "采购逾期",
+      projectId: purchase.projectId,
+      object: purchase.name || purchase.code || "-",
+      owner: purchase.supplier || "-",
+      date: purchase.expectedDelivery,
+      desc: "预计到货已逾期，需确认交付时间"
+    });
+  });
+  abnormalPurchases.forEach((purchase) => {
+    riskItems.push({
+      level: purchase.status === "异常" ? "高" : "中",
+      type: "采购风险",
+      projectId: purchase.projectId,
+      object: purchase.name || purchase.code || "-",
+      owner: purchase.supplier || "-",
+      date: purchase.expectedDelivery || "-",
+      desc: purchase.riskRemark || "采购状态异常"
+    });
+  });
+  activeProjects.forEach((project) => {
+    const completion = projectCompletion(project.id);
+    if (project.externalDue && isWithinNextDays(project.externalDue, 14, today) && completion < 70) {
+      riskItems.push({
+        level: "中",
+        type: "交付风险",
+        projectId: project.id,
+        object: project.name,
+        owner: project.owner || "-",
+        date: project.externalDue,
+        desc: `外部截止临近，当前任务完成度 ${fmtPercent(completion)}`
+      });
+    }
+  });
+
+  const riskProjectIds = new Set(riskItems.map((item) => item.projectId).filter(Boolean));
+
+  return {
+    activeProjects,
+    endedProjects,
+    overdueTasks,
+    upcomingTasks,
+    purchaseDone,
+    activePurchases,
+    overduePurchases,
+    abnormalPurchases,
+    upcomingPurchases,
+    monthlyDeliveryProjects,
+    projectRows,
+    projectStatusRows,
+    purchaseStatusRows,
+    storedQty,
+    issuedQty,
+    stockQty,
+    purchaseAmount,
+    riskItems: riskItems.slice(0, 10),
+    riskProjectCount: riskProjectIds.size
+  };
+}
+
 function countBy(items, getter) {
   return items.reduce((result, item) => {
     const key = getter(item);
@@ -608,6 +737,60 @@ function dashboardList(title, rows, emptyText) {
       ${rows.length ? rows.join("") : `<div class="empty-state compact-empty">${emptyText}</div>`}
     </div>
   </section>`;
+}
+
+function renderHomeDashboard() {
+  const dashboard = systemDashboardStats();
+  const totalProjects = state.projects.length;
+  const inventoryTotal = dashboard.issuedQty + dashboard.stockQty;
+  const riskRows = dashboard.riskItems.map((item) => [
+    badge(item.level === "高" ? "异常" : "进行中"),
+    item.type,
+    projectName(item.projectId),
+    item.object,
+    item.owner,
+    item.date,
+    item.desc
+  ]);
+
+  $("#homeDashboard").innerHTML = `
+    <div class="metric-grid leadership-metrics">
+      ${metricCard("项目总数", totalProjects, `进行中 ${dashboard.activeProjects.length} · 已结束 ${dashboard.endedProjects.length}`)}
+      ${metricCard("风险项目", dashboard.riskProjectCount, `逾期任务 ${dashboard.overdueTasks.length} · 异常采购 ${dashboard.abnormalPurchases.length}`)}
+      ${metricCard("本月交付", dashboard.monthlyDeliveryProjects.length, "按项目外部截止日期统计")}
+      ${metricCard("采购总额", fmtMoney(dashboard.purchaseAmount), `采购记录 ${state.purchases.length} 条`)}
+      ${metricCard("采购进度", `${dashboard.purchaseDone}/${state.purchases.length || 0}`, `待跟进 ${dashboard.activePurchases.length} · 逾期 ${dashboard.overduePurchases.length}`)}
+      ${metricCard("当前库存", dashboard.stockQty, `已入库 ${dashboard.storedQty} · 已出库 ${dashboard.issuedQty}`)}
+    </div>
+
+    <div class="dashboard-chart-grid leadership-chart-grid">
+      ${donutChart("项目状态分布", dashboard.projectStatusRows, totalProjects, `${dashboard.activeProjects.length}/${totalProjects || 0}`, "进行中 / 全部项目")}
+      ${donutChart("采购状态分布", dashboard.purchaseStatusRows, state.purchases.length, `${dashboard.purchaseDone}/${state.purchases.length || 0}`, "已到货 / 全部采购")}
+      ${barChart("项目完成度排行", dashboard.projectRows, 100, "暂无项目数据")}
+      ${stackedChart("库存使用结构", [
+        { label: "已出库", value: dashboard.issuedQty },
+        { label: "当前库存", value: dashboard.stockQty }
+      ], inventoryTotal, `已入库 ${dashboard.storedQty || 0}`)}
+    </div>
+
+    <div class="dashboard-two-col">
+      ${dashboardList(
+        "近期任务",
+        dashboard.upcomingTasks.map((task) => `<div class="dashboard-list-row"><strong>${task.name}</strong><span>${projectName(task.projectId)} · ${task.owner || "-"} · ${task.due}</span>${badge(task.status)}</div>`),
+        "未来 14 天暂无到期任务"
+      )}
+      ${dashboardList(
+        "近期采购到货",
+        dashboard.upcomingPurchases.map((purchase) => `<div class="dashboard-list-row"><strong>${purchase.name || purchase.code || "-"}</strong><span>${projectName(purchase.projectId)} · ${purchase.supplier || "-"} · ${purchase.expectedDelivery}</span>${badge(purchase.status)}</div>`),
+        "未来 14 天暂无预计到货"
+      )}
+    </div>
+
+    <section class="dashboard-list dashboard-risk-panel">
+      <h3>风险预警</h3>
+      ${riskRows.length ? detailTable(["等级", "类型", "所属项目", "关联对象", "责任/供应商", "计划时间", "风险说明"], riskRows) : `<div class="empty-state compact-empty">暂无风险预警</div>`}
+    </section>
+  `;
 }
 
 function barChart(title, rows, total, emptyText) {
@@ -1080,6 +1263,15 @@ function renderOutbounds() {
   $("#outboundRows").innerHTML = rows.join("") || emptyRow(9);
 }
 
+function renderInventoryTabs() {
+  $$("[data-inventory-tab]").forEach((button) => button.classList.toggle("active", button.dataset.inventoryTab === inventoryTab));
+  $("#inventoryReceipts").classList.toggle("active-inventory-pane", inventoryTab === "receipts");
+  $("#inventoryOutbounds").classList.toggle("active-inventory-pane", inventoryTab === "outbounds");
+  $("#inventoryPageTabs").classList.toggle("hidden", currentView !== "inventory");
+  $("#pageTitle").classList.toggle("hidden", currentView === "inventory");
+  $("#pageSubtitle").classList.toggle("hidden", currentView === "inventory");
+}
+
 function openReceiptItemDetail(purchaseItemId) {
   const purchaseItem = purchaseItemById(purchaseItemId);
   if (!purchaseItem) return;
@@ -1178,6 +1370,7 @@ function emptyRow(cols) {
 function render() {
   renderPageBackAction();
   renderPageActions();
+  renderHomeDashboard();
   renderProjectCards();
   renderProjectDetail();
   renderPurchaseFilter();
@@ -1186,6 +1379,7 @@ function render() {
   renderReceipts();
   renderOutboundFilter();
   renderOutbounds();
+  renderInventoryTabs();
   renderSettings();
 }
 
@@ -1694,11 +1888,13 @@ function renderPageActions() {
     outbounds: `<button class="ghost-button" id="detailAddOutbound" type="button">新增出库记录</button>`
   };
   const actions = {
+    dashboard: "",
     projects: `<button class="primary-button" data-dialog="projectDialog">新增项目</button>`,
     projectDetailPage: projectDetailActions[selectedDetailTab] || "",
     procurement: `<button class="primary-button" data-dialog="purchaseDialog">新增采购任务</button>`,
-    receipts: `<button class="primary-button" data-dialog="receiptDialog">新增入库</button>`,
-    outbounds: `<button class="primary-button" data-dialog="outboundDialog">新增出库</button>`,
+    inventory: inventoryTab === "outbounds"
+      ? `<button class="primary-button" data-dialog="outboundDialog">新增出库</button>`
+      : `<button class="primary-button" data-dialog="receiptDialog">新增入库</button>`,
     settings: ""
   };
   $("#pageActions").innerHTML = actions[currentView] || "";
@@ -1717,11 +1913,11 @@ function setView(view) {
   $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === navView));
   $$(".view").forEach((pane) => pane.classList.toggle("active-view", pane.id === view));
   const titles = {
+    dashboard: ["首页", "项目经营驾驶舱，关注进度、风险、采购和库存"],
     projects: ["项目管理", "查看项目列表、项目状态，并维护项目详情"],
     projectDetailPage: [projectName(selectedProjectId), "查看项目概览、项目任务、项目 BOM 表、采购、入库和出库记录"],
     procurement: ["采购管理", "按项目筛选采购任务，查看采购任务详情"],
-    receipts: ["入库管理", "记录采购明细的入库和质检情况"],
-    outbounds: ["出库管理", "记录项目物料的领用、发料和库存情况"],
+    inventory: ["出入库管理", "统一查看项目物料入库、出库和当前库存"],
     settings: ["系统设置", "维护项目类型、任务类型、状态、供应商等下拉选项"]
   };
   $("#pageTitle").textContent = titles[view][0];
@@ -1729,6 +1925,7 @@ function setView(view) {
   $("#globalSearch").classList.toggle("hidden", view === "settings");
   renderPageBackAction();
   renderPageActions();
+  renderInventoryTabs();
 }
 
 function bindEvents() {
@@ -1745,6 +1942,14 @@ function bindEvents() {
     if (detailTab) {
       selectedDetailTab = detailTab.dataset.detailTab;
       renderProjectDetail();
+      return;
+    }
+
+    const inventoryTabButton = event.target.closest("[data-inventory-tab]");
+    if (inventoryTabButton) {
+      inventoryTab = inventoryTabButton.dataset.inventoryTab;
+      renderInventoryTabs();
+      renderPageActions();
       return;
     }
 

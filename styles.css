@@ -173,6 +173,41 @@ textarea {
   color: var(--muted);
 }
 
+.page-subtabs {
+  display: inline-flex;
+  gap: 30px;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.page-subtab {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 0 6px;
+  font-size: 29px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  font-weight: 900;
+  border-bottom: 3px solid transparent;
+}
+
+.page-subtab.active {
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  border-bottom-color: var(--blue);
+}
+
+.page-subtab:hover {
+  color: var(--text);
+}
+
 .topbar-title-row {
   display: flex;
   align-items: flex-start;
@@ -383,6 +418,52 @@ textarea:focus {
   display: none;
 }
 
+.section-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-title-row h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.section-title-row p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.section-title-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.compact-filter-row {
+  justify-content: flex-start;
+}
+
+.inventory-section-title {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.inventory-pane {
+  display: none;
+}
+
+.active-inventory-pane {
+  display: block;
+}
+
 .compact-section {
   margin-top: 20px;
 }
@@ -580,6 +661,10 @@ td {
   gap: 12px;
 }
 
+.leadership-metrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .metric-card {
   min-height: 110px;
   padding: 16px;
@@ -661,6 +746,10 @@ td {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.leadership-chart-grid {
+  align-items: stretch;
 }
 
 .chart-card {
@@ -837,6 +926,10 @@ td {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+}
+
+.dashboard-risk-panel {
+  overflow: auto;
 }
 
 .dashboard-list h3 {
@@ -1243,6 +1336,7 @@ dialog::backdrop {
   .content-grid,
   .detail-summary,
   .metric-grid,
+  .leadership-metrics,
   .dashboard-progress-grid,
   .dashboard-chart-grid,
   .dashboard-two-col,
@@ -1258,9 +1352,18 @@ dialog::backdrop {
 
   .topbar,
   .topbar-actions,
+  .section-title-row,
   .panel-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .page-subtabs {
+    width: 100%;
+  }
+
+  .page-subtab {
+    flex: 1;
   }
 
   #globalSearch {
