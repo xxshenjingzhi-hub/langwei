@@ -1,0 +1,10 @@
+{
+  "name": "langwei-project-management",
+  "version": "0.2.0",
+  "private": true,
+  "description": "郎蔚光学项目管理系统 MVP",
+  "scripts": {
+    "start": "node backend/server.js",
+    "check": "node --check app.js && node --check backend/server.js"
+  }
+}

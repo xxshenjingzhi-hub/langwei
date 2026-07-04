@@ -1,5 +1,6 @@
 const STORAGE_KEY = "langwei-project-management-v3";
 const DATA_VERSION = 2026070401;
+const API_BASE = location.protocol.startsWith("http") ? "/api" : "";
 
 const defaultSettings = {
   projectTypes: ["研发（RD）", "销售（SP）"],
@@ -318,6 +319,38 @@ function normalizeOutboundStatusValue(status, issuedQty = 0) {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (API_BASE) {
+    syncStateToServer();
+  }
+}
+
+async function syncStateFromServer() {
+  if (!API_BASE) return;
+  try {
+    const response = await fetch(`${API_BASE}/state`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const remoteState = await response.json();
+    state = normalizeState(remoteState);
+    state.__dataVersion = DATA_VERSION;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    selectedProjectId = state.projects.some((project) => project.id === selectedProjectId) ? selectedProjectId : state.projects[0]?.id || "";
+    selectedPurchaseId = state.purchases.some((purchase) => purchase.id === selectedPurchaseId) ? selectedPurchaseId : state.purchases[0]?.id || "";
+    render();
+  } catch (error) {
+    console.warn("后端数据读取失败，继续使用浏览器本地数据。", error);
+  }
+}
+
+async function syncStateToServer() {
+  try {
+    await fetch(`${API_BASE}/state`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state)
+    });
+  } catch (error) {
+    console.warn("后端数据保存失败，已保留在浏览器本地。", error);
+  }
 }
 
 function mapPurchaseStatus(status) {
@@ -1812,3 +1845,4 @@ function bindEvents() {
 
 bindEvents();
 render();
+syncStateFromServer();

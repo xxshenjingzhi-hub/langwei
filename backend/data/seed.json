@@ -1,0 +1,167 @@
+{
+  "settings": {
+    "projectTypes": ["研发（RD）", "销售（SP）"],
+    "taskTypes": ["设计", "采购", "组装", "交付"],
+    "projectStatuses": ["未立项", "已立项", "进行中", "暂停", "已结束", "取消"],
+    "purchaseStatuses": ["待询价", "待下单", "已下单", "部分到货", "已到货", "异常", "取消"],
+    "receiptStatuses": ["部分入库", "已入库"],
+    "outboundStatuses": ["部分出库", "已出库"],
+    "suppliers": ["海康", "尼康", "诺焰", "慕藤光", "米思米", "汇川"]
+  },
+  "projects": [
+    {
+      "id": "p1",
+      "name": "半导体载盘缺陷检测仪",
+      "code": "LW-2026-XS-QXJC-02",
+      "type": "销售（SP）",
+      "status": "进行中",
+      "owner": "艾靖峰",
+      "internalDue": "2026-07-15",
+      "externalDue": "2026-07-15",
+      "summary": "采购与软件算法并行推进"
+    },
+    {
+      "id": "p2",
+      "name": "纤芯距测量仪",
+      "code": "LW-2026-RD-XXJ-07",
+      "type": "研发（RD）",
+      "status": "进行中",
+      "owner": "倪磊",
+      "internalDue": "2026-07-31",
+      "externalDue": "2026-10-31",
+      "summary": "结构设计进行中"
+    },
+    {
+      "id": "p3",
+      "name": "大矢高球形晶圆缺陷检测",
+      "code": "LW-2026-XS-QXJC-03",
+      "type": "销售（SP）",
+      "status": "已结束",
+      "owner": "艾靖峰",
+      "internalDue": "2026-05-29",
+      "externalDue": "2026-07-31",
+      "summary": "首批采购已完成"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "projectId": "p1",
+      "name": "需求说明书",
+      "type": "设计",
+      "priority": "P0",
+      "status": "进行中",
+      "owner": "莫亮",
+      "startDate": "2026-05-01",
+      "due": "2026-05-09",
+      "actualStart": "2026-05-01",
+      "actualEnd": "",
+      "remark": "需求边界持续补充"
+    },
+    {
+      "id": "t2",
+      "projectId": "p1",
+      "name": "机械结构 BOM",
+      "type": "设计",
+      "priority": "P0",
+      "status": "已完成",
+      "owner": "任志雄",
+      "startDate": "2026-05-10",
+      "due": "2026-05-28",
+      "actualStart": "2026-05-10",
+      "actualEnd": "2026-05-28",
+      "remark": "已形成采购清单"
+    }
+  ],
+  "materials": [
+    {
+      "id": "m1",
+      "projectId": "p1",
+      "name": "海康工业相机",
+      "spec": "2500W 相机",
+      "material": "",
+      "partType": "外购件",
+      "quantityPerSet": 2,
+      "totalQuantity": 12,
+      "unit": "台",
+      "unitPrice": "19500",
+      "surfaceTreatment": "",
+      "brandOrSupplier": "海康",
+      "purchaseLink": "",
+      "remark": "部分相机已发货，需跟进 CXP 线"
+    },
+    {
+      "id": "m2",
+      "projectId": "p2",
+      "name": "尼康物镜",
+      "spec": "5x / 20x / 10x / 50x",
+      "material": "",
+      "partType": "外购件",
+      "quantityPerSet": 4,
+      "totalQuantity": 4,
+      "unit": "个",
+      "unitPrice": "11500",
+      "surfaceTreatment": "",
+      "brandOrSupplier": "尼康",
+      "purchaseLink": "",
+      "remark": "10x、50x 交期两个月左右"
+    }
+  ],
+  "purchases": [
+    {
+      "id": "po1",
+      "projectId": "p1",
+      "type": "采购合同",
+      "code": "LWYF2606006",
+      "name": "工业相机等设备",
+      "supplier": "海康",
+      "totalAmount": "212800",
+      "applyDate": "2026-06-04",
+      "contractDate": "2026-06-04",
+      "expectedDelivery": "2026-06-20",
+      "status": "部分到货",
+      "bomOutside": "否",
+      "progressRemark": "部分货物已发出，剩余交期待确认",
+      "riskRemark": ""
+    }
+  ],
+  "purchaseItems": [
+    {
+      "id": "pi1",
+      "purchaseId": "po1",
+      "materialId": "m1",
+      "itemName": "海康工业相机",
+      "spec": "2500W 相机",
+      "unit": "台",
+      "quantity": 12,
+      "unitPrice": 19500,
+      "totalPrice": 234000,
+      "supplier": "海康",
+      "remark": "来源 BOM 项"
+    }
+  ],
+  "receipts": [
+    {
+      "id": "r1",
+      "purchaseItemId": "pi1",
+      "arrivalDate": "2026-06-20",
+      "arrivalQty": 2,
+      "storedQty": 2,
+      "status": "部分入库",
+      "qcDescription": "外观正常，尺寸待复核",
+      "exception": ""
+    }
+  ],
+  "outbounds": [
+    {
+      "id": "o1",
+      "purchaseItemId": "pi1",
+      "outboundDate": "2026-06-22",
+      "issuedQty": 1,
+      "receiver": "组装",
+      "purpose": "第一台设备组装",
+      "status": "部分出库",
+      "remark": "已领用 1 台"
+    }
+  ]
+}
