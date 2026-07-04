@@ -1,5 +1,5 @@
 const STORAGE_KEY = "langwei-project-management-v3";
-const DATA_VERSION = 2026061202;
+const DATA_VERSION = 2026070401;
 
 const defaultSettings = {
   projectTypes: ["研发（RD）", "销售（SP）"],
@@ -7,6 +7,7 @@ const defaultSettings = {
   projectStatuses: ["未立项", "已立项", "进行中", "暂停", "已结束", "取消"],
   purchaseStatuses: ["待询价", "待下单", "已下单", "部分到货", "已到货", "异常", "取消"],
   receiptStatuses: ["部分入库", "已入库"],
+  outboundStatuses: ["部分出库", "已出库"],
   suppliers: ["海康", "尼康", "诺焰", "慕藤光", "米思米", "汇川"]
 };
 
@@ -43,6 +44,9 @@ const seedData = {
   ],
   receipts: [
     { id: "r1", purchaseItemId: "pi4", arrivalDate: "2026-06-20", arrivalQty: 2, storedQty: 2, status: "已入库", qcDescription: "外观正常，尺寸待复核", exception: "" }
+  ],
+  outbounds: [
+    { id: "o1", purchaseItemId: "pi4", outboundDate: "2026-06-22", issuedQty: 1, receiver: "组装", purpose: "第一台设备组装", status: "部分出库", remark: "已领用 1 套" }
   ]
 };
 
@@ -54,6 +58,7 @@ let selectedProjectId = state.projects[0]?.id || "";
 let selectedDetailTab = "overview";
 let purchaseProjectFilter = "all";
 let receiptProjectFilter = "all";
+let outboundProjectFilter = "all";
 let selectedPurchaseId = state.purchases[0]?.id || "";
 
 const $ = (selector) => document.querySelector(selector);
@@ -72,6 +77,7 @@ const settingSections = [
   { key: "projectStatuses", title: "项目状态", desc: "用于项目列表筛选和项目当前状态维护" },
   { key: "purchaseStatuses", title: "采购状态", desc: "用于采购任务从询价、下单到到货的状态维护" },
   { key: "receiptStatuses", title: "入库状态", desc: "用于记录部分入库和已入库情况" },
+  { key: "outboundStatuses", title: "出库状态", desc: "用于记录部分出库和已出库情况" },
   { key: "suppliers", title: "供应商名称", desc: "用于采购任务和采购明细中的供应商选择" }
 ];
 
@@ -114,7 +120,8 @@ function normalizeState(parsed) {
     materials: normalizeMaterials(parsed.materials || []),
     purchases: [],
     purchaseItems: [],
-    receipts: []
+    receipts: [],
+    outbounds: []
   };
 
   const normalizedPurchases = normalizePurchases(parsed.purchases || []);
@@ -127,10 +134,12 @@ function normalizeState(parsed) {
   });
   const normalizedPurchaseItems = normalizePurchaseItems(parsed.purchaseItems || [], normalizedPurchases, parsed.purchases || [], normalized.materials);
   const normalizedReceipts = normalizeReceipts(parsed.receipts || [], normalizedPurchaseItems);
+  const normalizedOutbounds = normalizeOutbounds(parsed.outbounds || [], normalizedPurchaseItems);
 
   normalized.purchases = normalizedPurchases;
   normalized.purchaseItems = normalizedPurchaseItems;
   normalized.receipts = normalizedReceipts;
+  normalized.outbounds = normalizedOutbounds;
 
   return normalized;
 }
@@ -159,6 +168,7 @@ function restoreSeedProjectProcurement(normalized, projectId) {
     .filter((item) => !projectPurchaseIds.includes(item.purchaseId))
     .concat(structuredClone(seedData.purchaseItems.filter((item) => seedPurchaseIds.includes(item.purchaseId))));
   normalized.receipts = normalized.receipts.filter((item) => !projectPurchaseItemIds.includes(item.purchaseItemId));
+  normalized.outbounds = normalized.outbounds.filter((item) => !projectPurchaseItemIds.includes(item.purchaseItemId));
 
   seedData.materials
     .filter((item) => item.projectId === projectId)
@@ -261,6 +271,19 @@ function normalizeReceipts(receipts, purchaseItems) {
   })).filter((item) => item.purchaseItemId);
 }
 
+function normalizeOutbounds(outbounds, purchaseItems) {
+  return outbounds.map((item) => ({
+    id: item.id,
+    purchaseItemId: item.purchaseItemId || purchaseItems.find((purchaseItem) => purchaseItem.purchaseId === item.purchaseId)?.id || "",
+    outboundDate: item.outboundDate || "",
+    issuedQty: item.issuedQty ?? "",
+    receiver: item.receiver || "",
+    purpose: item.purpose || "",
+    status: normalizeOutboundStatusValue(item.status, item.issuedQty),
+    remark: item.remark || ""
+  })).filter((item) => item.purchaseItemId);
+}
+
 function normalizeSettings(settings) {
   const normalized = { ...settings };
   const invalidProjectStatuses = ["待交付", "已交付"];
@@ -271,6 +294,7 @@ function normalizeSettings(settings) {
   normalized.projectStatuses = (normalized.projectStatuses || []).filter((item) => !invalidProjectStatuses.includes(item));
   normalized.purchaseStatuses = (normalized.purchaseStatuses || []).map(mapPurchaseStatus).filter((item) => !invalidPurchaseStatuses.includes(item));
   normalized.receiptStatuses = (normalized.receiptStatuses || []).filter((item) => !invalidReceiptStatuses.includes(item));
+  normalized.outboundStatuses = normalized.outboundStatuses || [];
   normalized.suppliers = normalized.suppliers || [];
   Object.keys(defaultSettings).forEach((key) => {
     defaultSettings[key].forEach((item) => {
@@ -284,6 +308,12 @@ function normalizeReceiptStatusValue(status, storedQty = 0) {
   if (status === "已入库") return "已入库";
   if (status === "部分入库") return "部分入库";
   return Number(storedQty || 0) > 0 ? "部分入库" : "";
+}
+
+function normalizeOutboundStatusValue(status, issuedQty = 0) {
+  if (status === "已出库") return "已出库";
+  if (status === "部分出库") return "部分出库";
+  return Number(issuedQty || 0) > 0 ? "部分出库" : "";
 }
 
 function saveState() {
@@ -354,6 +384,10 @@ function receiptsForPurchaseItem(purchaseItemId) {
   return state.receipts.filter((item) => item.purchaseItemId === purchaseItemId);
 }
 
+function outboundsForPurchaseItem(purchaseItemId) {
+  return state.outbounds.filter((item) => item.purchaseItemId === purchaseItemId);
+}
+
 function purchaseTaskAmount(purchase) {
   if (!purchase) return "";
   if (purchase.totalAmount !== "" && purchase.totalAmount !== null && purchase.totalAmount !== undefined) return purchase.totalAmount;
@@ -406,9 +440,9 @@ function isActiveProject(project) {
 }
 
 function statusClass(status) {
-  if (["已完成", "已入库", "已交付", "已结束", "已关闭", "已到货"].includes(status)) return "done";
+  if (["已完成", "已入库", "已出库", "已交付", "已结束", "已关闭", "已到货"].includes(status)) return "done";
   if (["进行中", "推进中", "已下单", "部分到货"].includes(status)) return "progress";
-  if (["待询价", "待下单", "未开始", "未立项", "部分入库"].includes(status)) return "warn";
+  if (["待询价", "待下单", "未开始", "未立项", "部分入库", "部分出库"].includes(status)) return "warn";
   return "risk";
 }
 
@@ -436,9 +470,10 @@ function projectDetailData(projectId) {
   const purchaseItems = state.purchaseItems.filter((item) => purchaseIds.includes(item.purchaseId));
   const purchaseItemIds = purchaseItems.map((item) => item.id);
   const receipts = state.receipts.filter((item) => purchaseItemIds.includes(item.purchaseItemId));
+  const outbounds = state.outbounds.filter((item) => purchaseItemIds.includes(item.purchaseItemId));
   const doneTasks = tasks.filter((item) => item.status === "已完成").length;
   const nearestDelivery = purchases.filter((item) => item.status !== "已到货" && item.expectedDelivery).map((item) => item.expectedDelivery).sort()[0];
-  return { project, tasks, bom, purchases, purchaseItems, receipts, doneTasks, taskCompletion: pct(doneTasks, tasks.length), nearestDelivery };
+  return { project, tasks, bom, purchases, purchaseItems, receipts, outbounds, doneTasks, taskCompletion: pct(doneTasks, tasks.length), nearestDelivery };
 }
 
 function projectDashboardStats(data) {
@@ -453,7 +488,9 @@ function projectDashboardStats(data) {
   const purchaseAmount = data.purchases.reduce((sum, item) => sum + safeNumber(purchaseTaskAmount(item)), 0);
   const purchaseQuantity = data.purchaseItems.reduce((sum, item) => sum + safeNumber(item.quantity), 0);
   const storedQuantity = data.receipts.reduce((sum, item) => sum + safeNumber(item.storedQty), 0);
+  const issuedQuantity = data.outbounds.reduce((sum, item) => sum + safeNumber(item.issuedQty), 0);
   const storagePending = Math.max(purchaseQuantity - storedQuantity, 0);
+  const stockQuantity = Math.max(storedQuantity - issuedQuantity, 0);
   const linkedBomCount = purchasedMaterialIds.size;
   const taskTypeRows = rowsFromCounts(countBy(data.tasks, (item) => item.type || "未分类"), state.settings.taskTypes);
   const purchaseStatusRows = rowsFromCounts(countBy(data.purchases, (item) => item.status || "未填写"), state.settings.purchaseStatuses);
@@ -464,6 +501,10 @@ function projectDashboardStats(data) {
   const storageRows = [
     { label: "已入库", value: storedQuantity },
     { label: "待继续入库", value: storagePending }
+  ];
+  const outboundRows = [
+    { label: "已出库", value: issuedQuantity },
+    { label: "当前库存", value: stockQuantity }
   ];
   const upcomingTasks = data.tasks
     .filter((item) => item.due && !["已完成", "取消"].includes(item.status))
@@ -484,11 +525,14 @@ function projectDashboardStats(data) {
     purchaseAmount,
     purchaseQuantity,
     storedQuantity,
+    issuedQuantity,
     storagePending,
+    stockQuantity,
     taskTypeRows,
     purchaseStatusRows,
     bomCoverageRows,
     storageRows,
+    outboundRows,
     bomCoverage: pct(linkedBomCount, data.bom.length),
     purchaseCompletion: pct(purchaseDone, data.purchases.length),
     storageCompletion: pct(storedQuantity, purchaseQuantity),
@@ -633,6 +677,7 @@ function renderProjectDetail() {
     $("#detailBom").innerHTML = "";
     $("#detailPurchases").innerHTML = "";
     $("#detailReceipts").innerHTML = "";
+    $("#detailOutbounds").innerHTML = "";
     return;
   }
 
@@ -653,6 +698,7 @@ function renderProjectDetail() {
         ${metricCard("BOM 覆盖", `${data.purchaseItems.length} 项采购明细`, `BOM 转采购覆盖 ${fmtPercent(dashboard.bomCoverage)}`)}
         ${metricCard("采购金额", fmtMoney(dashboard.purchaseAmount), `采购记录 ${data.purchases.length} 条`)}
         ${metricCard("入库进度", `${dashboard.storedQuantity}/${dashboard.purchaseQuantity || 0}`, `未入库数量 ${dashboard.storagePending}`)}
+        ${metricCard("出库库存", `${dashboard.issuedQuantity}/${dashboard.storedQuantity || 0}`, `当前库存 ${dashboard.stockQuantity}`)}
         ${metricCard("最近采购到货", data.nearestDelivery || "-", `外部截止：${project.externalDue || "-"}`)}
       </div>
 
@@ -661,6 +707,7 @@ function renderProjectDetail() {
         ${progressBlock("采购记录完成度", dashboard.purchaseCompletion, `已到货 ${dashboard.purchaseDone} 条，进行中 ${dashboard.purchaseActive} 条，待处理 ${dashboard.purchasePending} 条`)}
         ${progressBlock("BOM 转采购覆盖率", dashboard.bomCoverage, `BOM ${data.bom.length} 项，已关联采购 ${data.purchaseItems.filter((item) => item.materialId).length} 项`)}
         ${progressBlock("入库完成度", dashboard.storageCompletion, `已入库 ${dashboard.storedQuantity}，采购数量 ${dashboard.purchaseQuantity || 0}`)}
+        ${progressBlock("出库使用率", pct(dashboard.issuedQuantity, dashboard.storedQuantity), `已出库 ${dashboard.issuedQuantity}，当前库存 ${dashboard.stockQuantity}`)}
       </div>
 
       <div class="dashboard-chart-grid">
@@ -668,6 +715,7 @@ function renderProjectDetail() {
         ${donutChart("采购状态分布", dashboard.purchaseStatusRows, data.purchases.length, `${dashboard.purchaseDone}/${data.purchases.length || 0}`, "已到货 / 全部采购")}
         ${stackedChart("BOM 采购覆盖", dashboard.bomCoverageRows, data.bom.length, `BOM ${data.bom.length} 项`)}
         ${stackedChart("入库数量结构", dashboard.storageRows, dashboard.purchaseQuantity, `采购数量 ${dashboard.purchaseQuantity || 0}`)}
+        ${stackedChart("出库库存结构", dashboard.outboundRows, dashboard.storedQuantity, `已入库 ${dashboard.storedQuantity || 0}`)}
       </div>
 
       <div class="dashboard-two-col">
@@ -760,6 +808,24 @@ function renderProjectDetail() {
       })
     );
 
+  $("#detailOutbounds").innerHTML = detailTable(
+      ["BOM项", "采购记录", "已入库", "已出库", "当前库存", "最近出库", "出库状态", "操作"],
+      data.purchaseItems.map((item) => {
+        const purchase = purchaseTaskById(item.purchaseId);
+        const stats = stockStats(item.id);
+        return [
+          purchaseItemSubjectCell(item, false),
+          purchaseRecordCell(purchase),
+          stats.stored || "-",
+          stats.issued || "-",
+          stats.stock === "" ? "-" : stats.stock,
+          stats.latestOutbound?.outboundDate || "-",
+          stats.outboundStatus ? badge(stats.outboundStatus) : "-",
+          `<div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div>`
+        ];
+      })
+    );
+
   $$(".detail-tab").forEach((button) => button.classList.toggle("active", button.dataset.detailTab === selectedDetailTab));
   $$(".detail-pane").forEach((pane) => pane.classList.remove("active-detail-pane"));
   $(`#detail${selectedDetailTab[0].toUpperCase()}${selectedDetailTab.slice(1)}`).classList.add("active-detail-pane");
@@ -830,7 +896,7 @@ function openPurchaseDetail(purchaseId) {
     <div class="detail-section">
       <div class="section-label">采购明细</div>
       ${purchaseItems.length ? detailTable(
-        ["关联 BOM 项", "物料名称", "规格型号", "单位", "数量", "单价", "总价", "供应商", "备注", "入库", "操作"],
+        ["关联 BOM 项", "物料名称", "规格型号", "单位", "数量", "单价", "总价", "供应商", "备注", "入库", "出库/库存", "操作"],
         purchaseItems.map((item) => [
           item.materialId ? materialName(item.materialId) : "BOM 外新增",
           item.itemName || "-",
@@ -842,7 +908,8 @@ function openPurchaseDetail(purchaseId) {
           item.supplier || "-",
           item.remark || "-",
           receiptSummaryText(item.id),
-          `<div class="row-actions"><button class="ghost-button small-button" data-action="create-receipt" data-id="${item.id}">新增入库</button>${rowActionButtons("purchase-item", item.id)}</div>`
+          outboundSummaryText(item.id),
+          `<div class="row-actions"><button class="ghost-button small-button" data-action="create-receipt" data-id="${item.id}">新增入库</button><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${rowActionButtons("purchase-item", item.id)}</div>`
         ])
       ) : `<div class="empty-state compact-empty">暂无采购明细</div>`}
     </div>
@@ -859,8 +926,18 @@ function receiptSummaryText(purchaseItemId) {
   return `${latest.status} / 已入库 ${stored || 0}`;
 }
 
+function outboundSummaryText(purchaseItemId) {
+  const stats = stockStats(purchaseItemId);
+  if (!stats.issued) return `库存 ${stats.stock === "" ? 0 : stats.stock}`;
+  return `${stats.outboundStatus} / 已出库 ${stats.issued} / 库存 ${stats.stock}`;
+}
+
 function renderReceiptFilter() {
   $("#receiptProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${project.id}" ${receiptProjectFilter === project.id ? "selected" : ""}>${project.name}</option>`).join("")}`;
+}
+
+function renderOutboundFilter() {
+  $("#outboundProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${project.id}" ${outboundProjectFilter === project.id ? "selected" : ""}>${project.name}</option>`).join("")}`;
 }
 
 function receiptStats(purchaseItemId) {
@@ -882,6 +959,30 @@ function receiptStatusForItem(purchaseItemId) {
   const stored = receipts.reduce((sum, item) => sum + Number(item.storedQty || 0), 0);
   if (purchased && stored >= purchased) return "已入库";
   if (stored > 0) return "部分入库";
+  return "";
+}
+
+function outboundStatusForItem(purchaseItemId) {
+  const stats = stockStats(purchaseItemId);
+  if (stats.stored && stats.issued >= stats.stored) return "已出库";
+  if (stats.issued > 0) return "部分出库";
+  return "";
+}
+
+function stockStats(purchaseItemId) {
+  const receipt = receiptStats(purchaseItemId);
+  const outbounds = outboundsForPurchaseItem(purchaseItemId);
+  const issued = outbounds.reduce((sum, item) => sum + Number(item.issuedQty || 0), 0);
+  const stock = receipt.stored === "" ? "" : Math.max(Number(receipt.stored || 0) - issued, 0);
+  const latestOutbound = outbounds.slice().sort((a, b) => String(a.outboundDate || "").localeCompare(String(b.outboundDate || ""))).at(-1);
+  const outboundStatus = outboundStatusForItemRaw(receipt.stored, issued);
+  return { ...receipt, issued, stock, latestOutbound, outboundStatus };
+}
+
+function outboundStatusForItemRaw(stored, issued) {
+  const storedNumber = Number(stored || 0);
+  if (storedNumber && issued >= storedNumber) return "已出库";
+  if (issued > 0) return "部分出库";
   return "";
 }
 
@@ -914,6 +1015,36 @@ function renderReceipts() {
     </tr>`;
   });
   $("#receiptRows").innerHTML = rows.join("") || emptyRow(9);
+}
+
+function renderOutbounds() {
+  let purchaseItems = filtered(state.purchaseItems, [
+    (item) => purchaseTaskName(item.purchaseId),
+    (item) => purchaseTaskById(item.purchaseId)?.code,
+    (item) => projectName(purchaseTaskById(item.purchaseId)?.projectId),
+    (item) => item.materialId ? materialName(item.materialId) : item.itemName,
+    (item) => outboundStatusForItem(item.id)
+  ]);
+  if (outboundProjectFilter !== "all") {
+    purchaseItems = purchaseItems.filter((item) => purchaseTaskById(item.purchaseId)?.projectId === outboundProjectFilter);
+  }
+
+  const rows = purchaseItems.map((item) => {
+    const purchase = purchaseTaskById(item.purchaseId);
+    const stats = stockStats(item.id);
+    return `<tr>
+      <td>${purchaseItemSubjectCell(item, false)}</td>
+      <td>${projectName(purchase?.projectId)}</td>
+      <td>${purchaseRecordCell(purchase)}</td>
+      <td>${stats.stored || "-"}</td>
+      <td>${stats.issued || "-"}</td>
+      <td>${stats.stock === "" ? "-" : stats.stock}</td>
+      <td>${stats.latestOutbound?.outboundDate || "-"}</td>
+      <td>${stats.outboundStatus ? badge(stats.outboundStatus) : "-"}</td>
+      <td><div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div></td>
+    </tr>`;
+  });
+  $("#outboundRows").innerHTML = rows.join("") || emptyRow(9);
 }
 
 function openReceiptItemDetail(purchaseItemId) {
@@ -1020,6 +1151,8 @@ function render() {
   renderPurchases();
   renderReceiptFilter();
   renderReceipts();
+  renderOutboundFilter();
+  renderOutbounds();
   renderSettings();
 }
 
@@ -1157,6 +1290,19 @@ function dialogTemplate(id, defaults = {}) {
         ["qcDescription", "质检描述", "textarea"],
         ["exception", "异常说明", "textarea"]
       ]
+    },
+    outboundDialog: {
+      title: defaults.id ? "编辑出库记录" : "新增出库记录",
+      target: "outbounds",
+      fields: [
+        ["purchaseItemId", "关联采购明细", defaults.lockPurchaseItem ? "hidden" : "purchaseItem"],
+        ["outboundDate", "出库日期", "date"],
+        ["issuedQty", "出库数量", "number"],
+        ["receiver", "领用人/部门", "text"],
+        ["purpose", "用途", "text"],
+        ["status", "出库状态", "setting", "outboundStatuses"],
+        ["remark", "备注", "textarea"]
+      ]
     }
   };
   const config = map[id];
@@ -1221,7 +1367,7 @@ function handleSubmit(event) {
     const index = state[target].findIndex((item) => item.id === editingId);
     if (index >= 0) state[target][index] = { ...state[target][index], ...data, id: editingId };
   } else {
-    const prefixes = { projects: "pr", tasks: "ta", materials: "ma", purchases: "po", purchaseItems: "pi", receipts: "re" };
+    const prefixes = { projects: "pr", tasks: "ta", materials: "ma", purchases: "po", purchaseItems: "pi", receipts: "re", outbounds: "ou" };
     data.id = `${prefixes[target] || "id"}${Date.now()}`;
     state[target].push(data);
   }
@@ -1249,6 +1395,22 @@ function handleSubmit(event) {
       return;
     }
     syncPurchaseStatusByReceiptItem(data.purchaseItemId);
+  }
+
+  if (target === "outbounds" && !data.purchaseItemId) {
+    window.alert("请先选择可出库的采购明细。");
+    return;
+  }
+
+  if (target === "outbounds") {
+    const currentRecord = editingId ? state.outbounds.find((item) => item.id === editingId) : null;
+    const stats = stockStats(data.purchaseItemId);
+    const available = safeNumber(stats.stock) + safeNumber(currentRecord?.issuedQty);
+    if (safeNumber(data.issuedQty) > available) {
+      window.alert(`当前可出库库存为 ${available}，请检查出库数量。`);
+      return;
+    }
+    data.status = normalizeOutboundStatusValue(data.status, data.issuedQty);
   }
 
   if (target === "purchaseItems") {
@@ -1286,7 +1448,7 @@ function latestReceiptStatus(purchaseItemId) {
 function deleteProject(projectId) {
   const project = state.projects.find((item) => item.id === projectId);
   if (!project) return false;
-  const ok = window.confirm(`确认删除项目「${project.name}」？关联任务、BOM、采购任务、采购明细和入库记录也会一起删除。`);
+  const ok = window.confirm(`确认删除项目「${project.name}」？关联任务、BOM、采购任务、采购明细、入库记录和出库记录也会一起删除。`);
   if (!ok) return false;
   const materialIds = state.materials.filter((item) => item.projectId === projectId).map((item) => item.id);
   const purchaseIds = state.purchases.filter((item) => item.projectId === projectId).map((item) => item.id);
@@ -1297,6 +1459,7 @@ function deleteProject(projectId) {
   state.purchases = state.purchases.filter((item) => !purchaseIds.includes(item.id));
   state.purchaseItems = state.purchaseItems.filter((item) => !purchaseItemIds.includes(item.id));
   state.receipts = state.receipts.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
+  state.outbounds = state.outbounds.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   if (selectedProjectId === projectId) selectedProjectId = state.projects[0]?.id || "";
   saveState();
   render();
@@ -1316,12 +1479,13 @@ function deleteTask(taskId) {
 function deleteMaterial(materialId) {
   const material = state.materials.find((item) => item.id === materialId);
   if (!material) return;
-  const ok = window.confirm(`确认删除BOM项「${material.name}」？关联采购明细和入库记录会一起删除。`);
+  const ok = window.confirm(`确认删除BOM项「${material.name}」？关联采购明细、入库记录和出库记录会一起删除。`);
   if (!ok) return;
   const purchaseItemIds = state.purchaseItems.filter((item) => item.materialId === materialId).map((item) => item.id);
   state.materials = state.materials.filter((item) => item.id !== materialId);
   state.purchaseItems = state.purchaseItems.filter((item) => item.materialId !== materialId);
   state.receipts = state.receipts.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
+  state.outbounds = state.outbounds.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   saveState();
   render();
 }
@@ -1329,12 +1493,13 @@ function deleteMaterial(materialId) {
 function deletePurchase(purchaseId) {
   const purchase = purchaseTaskById(purchaseId);
   if (!purchase) return;
-  const ok = window.confirm(`确认删除采购任务「${purchase.name}」？关联采购明细和入库记录也会一起删除。`);
+  const ok = window.confirm(`确认删除采购任务「${purchase.name}」？关联采购明细、入库记录和出库记录也会一起删除。`);
   if (!ok) return;
   const purchaseItemIds = purchaseItemsForTask(purchaseId).map((item) => item.id);
   state.purchases = state.purchases.filter((item) => item.id !== purchaseId);
   state.purchaseItems = state.purchaseItems.filter((item) => item.purchaseId !== purchaseId);
   state.receipts = state.receipts.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
+  state.outbounds = state.outbounds.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   if (selectedPurchaseId === purchaseId) selectedPurchaseId = state.purchases[0]?.id || "";
   closePurchaseDetailDialog();
   saveState();
@@ -1344,10 +1509,11 @@ function deletePurchase(purchaseId) {
 function deletePurchaseItem(purchaseItemId) {
   const purchaseItem = purchaseItemById(purchaseItemId);
   if (!purchaseItem) return;
-  const ok = window.confirm(`确认删除采购明细「${purchaseItem.itemName || materialName(purchaseItem.materialId)}」？关联入库记录也会一起删除。`);
+  const ok = window.confirm(`确认删除采购明细「${purchaseItem.itemName || materialName(purchaseItem.materialId)}」？关联入库记录和出库记录也会一起删除。`);
   if (!ok) return;
   state.purchaseItems = state.purchaseItems.filter((item) => item.id !== purchaseItemId);
   state.receipts = state.receipts.filter((item) => item.purchaseItemId !== purchaseItemId);
+  state.outbounds = state.outbounds.filter((item) => item.purchaseItemId !== purchaseItemId);
   saveState();
   render();
   reopenPurchaseDetailIfNeeded(purchaseItem.purchaseId);
@@ -1367,6 +1533,16 @@ function deleteReceipt(receiptId) {
   saveState();
   render();
   if (detailOpen) openReceiptItemDetail(purchaseItemId);
+}
+
+function deleteOutbound(outboundId) {
+  const outbound = state.outbounds.find((item) => item.id === outboundId);
+  if (!outbound) return;
+  const ok = window.confirm(`确认删除「${purchaseItemName(outbound.purchaseItemId)}」的出库记录？`);
+  if (!ok) return;
+  state.outbounds = state.outbounds.filter((item) => item.id !== outboundId);
+  saveState();
+  render();
 }
 
 function syncPurchaseStatusAfterReceiptDelete(purchaseId) {
@@ -1481,13 +1657,15 @@ function renderPageActions() {
     bom: `<button class="ghost-button" id="detailAddMaterial" type="button">添加 BOM 项</button>`,
     purchases: `<button class="ghost-button" id="detailAddPurchase" type="button">新增采购记录</button>
       <button class="ghost-button" id="detailAddReceipt" type="button">新增入库记录</button>`,
-    receipts: `<button class="ghost-button" id="detailAddReceipt" type="button">新增入库记录</button>`
+    receipts: `<button class="ghost-button" id="detailAddReceipt" type="button">新增入库记录</button>`,
+    outbounds: `<button class="ghost-button" id="detailAddOutbound" type="button">新增出库记录</button>`
   };
   const actions = {
     projects: `<button class="primary-button" data-dialog="projectDialog">新增项目</button>`,
     projectDetailPage: projectDetailActions[selectedDetailTab] || "",
     procurement: `<button class="primary-button" data-dialog="purchaseDialog">新增采购任务</button>`,
     receipts: `<button class="primary-button" data-dialog="receiptDialog">新增入库</button>`,
+    outbounds: `<button class="primary-button" data-dialog="outboundDialog">新增出库</button>`,
     settings: ""
   };
   $("#pageActions").innerHTML = actions[currentView] || "";
@@ -1507,9 +1685,10 @@ function setView(view) {
   $$(".view").forEach((pane) => pane.classList.toggle("active-view", pane.id === view));
   const titles = {
     projects: ["项目管理", "查看项目列表、项目状态，并维护项目详情"],
-    projectDetailPage: [projectName(selectedProjectId), "查看项目概览、项目任务、项目 BOM 表和采购记录"],
+    projectDetailPage: [projectName(selectedProjectId), "查看项目概览、项目任务、项目 BOM 表、采购、入库和出库记录"],
     procurement: ["采购管理", "按项目筛选采购任务，查看采购任务详情"],
     receipts: ["入库管理", "记录采购明细的入库和质检情况"],
+    outbounds: ["出库管理", "记录项目物料的领用、发料和库存情况"],
     settings: ["系统设置", "维护项目类型、任务类型、状态、供应商等下拉选项"]
   };
   $("#pageTitle").textContent = titles[view][0];
@@ -1551,6 +1730,7 @@ function bindEvents() {
       if (event.target.id === "detailAddMaterial" && selectedProjectId) openDialog("materialDialog", { projectId: selectedProjectId, lockProject: true });
       if (event.target.id === "detailAddPurchase" && selectedProjectId) openDialog("purchaseDialog", { projectId: selectedProjectId, lockProject: true });
       if (event.target.id === "detailAddReceipt" && selectedProjectId) openDialog("receiptDialog", { projectId: selectedProjectId });
+      if (event.target.id === "detailAddOutbound" && selectedProjectId) openDialog("outboundDialog", { projectId: selectedProjectId });
       return;
     }
 
@@ -1599,6 +1779,9 @@ function bindEvents() {
       openDialog("receiptDialog", state.receipts.find((item) => item.id === id));
     }
     if (action === "delete-receipt") deleteReceipt(id);
+    if (action === "create-outbound") openDialog("outboundDialog", { purchaseItemId: id, lockPurchaseItem: true });
+    if (action === "edit-outbound") openDialog("outboundDialog", state.outbounds.find((item) => item.id === id));
+    if (action === "delete-outbound") deleteOutbound(id);
     if (action === "select-purchase") {
       selectedPurchaseId = id;
       renderPurchases();
@@ -1620,6 +1803,10 @@ function bindEvents() {
   $("#receiptProjectFilter").addEventListener("change", (event) => {
     receiptProjectFilter = event.target.value;
     renderReceipts();
+  });
+  $("#outboundProjectFilter").addEventListener("change", (event) => {
+    outboundProjectFilter = event.target.value;
+    renderOutbounds();
   });
 }
 

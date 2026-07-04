@@ -20,6 +20,7 @@
           <button class="nav-item active" data-view="projects">项目管理</button>
           <button class="nav-item" data-view="procurement">采购管理</button>
           <button class="nav-item" data-view="receipts">入库管理</button>
+          <button class="nav-item" data-view="outbounds">出库管理</button>
           <button class="nav-item" data-view="settings">系统设置</button>
         </nav>
         <div class="scope-note">
@@ -62,12 +63,14 @@
               <button class="detail-tab" data-detail-tab="bom">项目 BOM 表</button>
               <button class="detail-tab" data-detail-tab="purchases">采购记录</button>
               <button class="detail-tab" data-detail-tab="receipts">入库记录</button>
+              <button class="detail-tab" data-detail-tab="outbounds">出库记录</button>
             </div>
             <div id="detailOverview" class="detail-pane active-detail-pane"></div>
             <div id="detailTasks" class="detail-pane"></div>
             <div id="detailBom" class="detail-pane"></div>
             <div id="detailPurchases" class="detail-pane"></div>
             <div id="detailReceipts" class="detail-pane"></div>
+            <div id="detailOutbounds" class="detail-pane"></div>
           </section>
         </section>
 
@@ -116,6 +119,24 @@
           </section>
         </section>
 
+        <section id="outbounds" class="view">
+          <section class="panel">
+            <div class="toolbar-row">
+              <label>项目筛选
+                <select id="outboundProjectFilter"></select>
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>BOM项</th><th>所属项目</th><th>采购记录</th><th>已入库</th><th>已出库</th><th>当前库存</th><th>最近出库</th><th>出库状态</th><th>操作</th></tr>
+                </thead>
+                <tbody id="outboundRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
         <section id="settings" class="view">
           <section class="panel">
             <div id="settingsGrid" class="settings-grid"></div>
@@ -132,6 +153,7 @@
     <dialog id="purchaseItemDialog"></dialog>
     <dialog id="receiptDetailDialog"></dialog>
     <dialog id="receiptDialog"></dialog>
+    <dialog id="outboundDialog"></dialog>
     <dialog id="settingOptionDialog"></dialog>
 
     <script src="./app.js"></script>
