@@ -323,9 +323,6 @@ function normalizeOutboundStatusValue(status, issuedQty = 0) {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if (API_BASE) {
-    syncStateToServer();
-  }
 }
 
 async function syncStateFromServer() {
@@ -345,16 +342,46 @@ async function syncStateFromServer() {
   }
 }
 
-async function syncStateToServer() {
+async function apiRequest(path, options = {}) {
+  if (!API_BASE) return null;
   try {
-    await fetch(`${API_BASE}/state`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(state)
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
     });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
   } catch (error) {
     console.warn("后端数据保存失败，已保留在浏览器本地。", error);
+    return null;
   }
+}
+
+async function persistResource(resource, item, editingId = "") {
+  if (!API_BASE) return null;
+  const id = encodeURIComponent(editingId || item.id);
+  const method = editingId ? "PUT" : "POST";
+  const path = editingId ? `/${resource}/${id}` : `/${resource}`;
+  return apiRequest(path, {
+    method,
+    body: JSON.stringify(item)
+  });
+}
+
+async function deleteResource(resource, id) {
+  if (!API_BASE) return null;
+  return apiRequest(`/${resource}/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+async function persistSettings() {
+  if (!API_BASE) return null;
+  return apiRequest("/settings", {
+    method: "PUT",
+    body: JSON.stringify(state.settings)
+  });
 }
 
 function mapPurchaseStatus(status) {
@@ -1579,7 +1606,7 @@ function fieldTemplate([name, label, type, options], defaults = {}) {
   return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}" /></label>`;
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const target = form.dataset.target;
@@ -1635,6 +1662,8 @@ function handleSubmit(event) {
     data.status = normalizeOutboundStatusValue(data.status, data.issuedQty);
   }
 
+  const relatedPersists = [];
+
   if (editingId) {
     const index = state[target].findIndex((item) => item.id === editingId);
     if (index >= 0) state[target][index] = { ...state[target][index], ...data, id: editingId };
@@ -1646,7 +1675,7 @@ function handleSubmit(event) {
 
   if (target === "purchases" && !editingId && data.sourceMaterialId) {
     const material = materialById(data.sourceMaterialId);
-    state.purchaseItems.push({
+    const purchaseItem = {
       id: `pu${Date.now()}1`,
       purchaseId: data.id,
       materialId: data.sourceMaterialId,
@@ -1658,19 +1687,30 @@ function handleSubmit(event) {
       totalPrice: calcTotal(material?.totalQuantity, material?.unitPrice),
       supplier: data.supplier || material?.brandOrSupplier || "",
       remark: material ? "来源 BOM 项" : ""
-    });
+    };
+    state.purchaseItems.push(purchaseItem);
+    relatedPersists.push(["purchaseItems", purchaseItem, ""]);
   }
 
   if (target === "receipts") {
     syncPurchaseStatusByReceiptItem(data.purchaseItemId);
+    const purchaseId = purchaseItemById(data.purchaseItemId)?.purchaseId;
+    const purchase = purchaseId ? purchaseTaskById(purchaseId) : null;
+    if (purchase) relatedPersists.push(["purchases", purchase, purchase.id]);
   }
 
   if (target === "purchaseItems") {
     syncPurchaseStatusByReceiptItem(editingId || data.id);
+    const purchase = purchaseTaskById(data.purchaseId);
+    if (purchase) relatedPersists.push(["purchases", purchase, purchase.id]);
   }
 
   if (target === "purchases") selectedPurchaseId = editingId || data.id;
   saveState();
+  await persistResource(target, data, editingId);
+  for (const [resource, item, id] of relatedPersists) {
+    await persistResource(resource, item, id);
+  }
   form.closest("dialog").close();
   render();
 }
@@ -1697,7 +1737,7 @@ function latestReceiptStatus(purchaseItemId) {
   return receipts[receipts.length - 1]?.status || "";
 }
 
-function deleteProject(projectId) {
+async function deleteProject(projectId) {
   const project = state.projects.find((item) => item.id === projectId);
   if (!project) return false;
   const ok = window.confirm(`确认删除项目「${project.name}」？关联任务、BOM、采购任务、采购明细、入库记录和出库记录也会一起删除。`);
@@ -1714,21 +1754,23 @@ function deleteProject(projectId) {
   state.outbounds = state.outbounds.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   if (selectedProjectId === projectId) selectedProjectId = state.projects[0]?.id || "";
   saveState();
+  await deleteResource("projects", projectId);
   render();
   return true;
 }
 
-function deleteTask(taskId) {
+async function deleteTask(taskId) {
   const task = state.tasks.find((item) => item.id === taskId);
   if (!task) return;
   const ok = window.confirm(`确认删除任务「${task.name}」？`);
   if (!ok) return;
   state.tasks = state.tasks.filter((item) => item.id !== taskId);
   saveState();
+  await deleteResource("tasks", taskId);
   render();
 }
 
-function deleteMaterial(materialId) {
+async function deleteMaterial(materialId) {
   const material = state.materials.find((item) => item.id === materialId);
   if (!material) return;
   const ok = window.confirm(`确认删除BOM项「${material.name}」？关联采购明细、入库记录和出库记录会一起删除。`);
@@ -1739,10 +1781,11 @@ function deleteMaterial(materialId) {
   state.receipts = state.receipts.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   state.outbounds = state.outbounds.filter((item) => !purchaseItemIds.includes(item.purchaseItemId));
   saveState();
+  await deleteResource("materials", materialId);
   render();
 }
 
-function deletePurchase(purchaseId) {
+async function deletePurchase(purchaseId) {
   const purchase = purchaseTaskById(purchaseId);
   if (!purchase) return;
   const ok = window.confirm(`确认删除采购任务「${purchase.name}」？关联采购明细、入库记录和出库记录也会一起删除。`);
@@ -1755,10 +1798,11 @@ function deletePurchase(purchaseId) {
   if (selectedPurchaseId === purchaseId) selectedPurchaseId = state.purchases[0]?.id || "";
   closePurchaseDetailDialog();
   saveState();
+  await deleteResource("purchases", purchaseId);
   render();
 }
 
-function deletePurchaseItem(purchaseItemId) {
+async function deletePurchaseItem(purchaseItemId) {
   const purchaseItem = purchaseItemById(purchaseItemId);
   if (!purchaseItem) return;
   const ok = window.confirm(`确认删除采购明细「${purchaseItem.itemName || materialName(purchaseItem.materialId)}」？关联入库记录和出库记录也会一起删除。`);
@@ -1767,11 +1811,12 @@ function deletePurchaseItem(purchaseItemId) {
   state.receipts = state.receipts.filter((item) => item.purchaseItemId !== purchaseItemId);
   state.outbounds = state.outbounds.filter((item) => item.purchaseItemId !== purchaseItemId);
   saveState();
+  await deleteResource("purchaseItems", purchaseItemId);
   render();
   reopenPurchaseDetailIfNeeded(purchaseItem.purchaseId);
 }
 
-function deleteReceipt(receiptId) {
+async function deleteReceipt(receiptId) {
   const receipt = state.receipts.find((item) => item.id === receiptId);
   if (!receipt) return;
   const ok = window.confirm(`确认删除「${purchaseItemName(receipt.purchaseItemId)}」的入库记录？`);
@@ -1783,17 +1828,21 @@ function deleteReceipt(receiptId) {
   if (purchaseId) syncPurchaseStatusAfterReceiptDelete(purchaseId);
   if (detailOpen) closeReceiptDetailDialog();
   saveState();
+  await deleteResource("receipts", receiptId);
+  const purchase = purchaseId ? purchaseTaskById(purchaseId) : null;
+  if (purchase) await persistResource("purchases", purchase, purchase.id);
   render();
   if (detailOpen) openReceiptItemDetail(purchaseItemId);
 }
 
-function deleteOutbound(outboundId) {
+async function deleteOutbound(outboundId) {
   const outbound = state.outbounds.find((item) => item.id === outboundId);
   if (!outbound) return;
   const ok = window.confirm(`确认删除「${purchaseItemName(outbound.purchaseItemId)}」的出库记录？`);
   if (!ok) return;
   state.outbounds = state.outbounds.filter((item) => item.id !== outboundId);
   saveState();
+  await deleteResource("outbounds", outboundId);
   render();
 }
 
@@ -1874,7 +1923,7 @@ function openSettingOptionDialog(key, index = "") {
   dialog.querySelector("[data-close]").addEventListener("click", () => dialog.close());
 }
 
-function handleSettingOptionSubmit(event) {
+async function handleSettingOptionSubmit(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const key = form.dataset.settingKey;
@@ -1888,17 +1937,19 @@ function handleSettingOptionSubmit(event) {
     state.settings[key][Number(index)] = value;
   }
   saveState();
+  await persistSettings();
   form.closest("dialog").close();
   render();
 }
 
-function deleteSettingOption(key, index) {
+async function deleteSettingOption(key, index) {
   const value = state.settings[key]?.[Number(index)];
   if (!value) return;
   const ok = window.confirm(`确认删除「${value}」？`);
   if (!ok) return;
   state.settings[key].splice(Number(index), 1);
   saveState();
+  await persistSettings();
   render();
 }
 

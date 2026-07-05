@@ -1,6 +1,6 @@
 # 后端 API 设计
 
-当前后端使用 Node.js 原生 HTTP 服务 + SQLite 存储实现，不依赖 npm 外部包。默认数据库文件为 `backend/data/db.sqlite`；首次启动时如果数据库为空，会从 `backend/data/db.json`（存在时优先）或 `backend/data/seed.json` 导入初始数据。写入会通过 SQLite 事务提交，并在写入前保存一份 JSON 快照备份。
+当前后端使用 Node.js 原生 HTTP 服务。默认本地存储为 SQLite，数据库文件为 `backend/data/db.sqlite`；生产部署建议使用 PostgreSQL，配置 `DATABASE_URL` 后后端会自动切换到 PostgreSQL。首次启动时如果数据库为空，会从 `backend/data/db.json`（存在时优先）或 `backend/data/seed.json` 导入初始数据。写入会通过数据库事务提交，并在写入前保存一份 JSON 快照备份。
 
 ## 启动
 
@@ -37,6 +37,10 @@ npm test
 | `PORT` | `5173` | 服务端口 |
 | `DATA_DIR` | `backend/data` | 数据目录 |
 | `SQLITE_PATH` | `DATA_DIR/db.sqlite` | SQLite 数据库文件路径 |
+| `DATABASE_URL` | 空 | PostgreSQL 连接串；配置后启用 PostgreSQL 存储 |
+| `PG_POOL_MAX` | `10` | PostgreSQL 连接池最大连接数 |
+| `PG_IDLE_TIMEOUT_MS` | `30000` | PostgreSQL 空闲连接释放时间 |
+| `PG_CONNECT_TIMEOUT_MS` | `10000` | PostgreSQL 建连超时时间 |
 | `BACKUP_DIR` | `DATA_DIR/backups` | 数据备份目录 |
 | `BACKUP_ON_WRITE` | `true` | 设为 `false` 可关闭写入前备份 |
 | `MAX_BACKUPS` | `30` | 最多保留备份数量 |

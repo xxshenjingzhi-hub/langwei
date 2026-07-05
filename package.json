@@ -5,7 +5,10 @@
   "description": "郎蔚光学项目管理系统 MVP",
   "scripts": {
     "start": "node backend/server.js",
-    "check": "node --check app.js && node --check backend/server.js && node --check backend/storage.js",
+    "check": "node --check app.js && node --check backend/server.js && node --check backend/storage.js && node --check backend/sqlite-storage.js && node --check backend/postgres-storage.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }

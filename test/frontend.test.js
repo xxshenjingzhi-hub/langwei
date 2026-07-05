@@ -59,7 +59,7 @@ function loadFrontend(overrides = {}) {
   const context = {
     console,
     structuredClone,
-    location: { protocol: "file:" },
+    location: { protocol: overrides.protocol || "file:" },
     localStorage: {
       getItem(key) {
         return localStorageData.has(key) ? localStorageData.get(key) : null;
@@ -86,6 +86,7 @@ function loadFrontend(overrides = {}) {
         return true;
       }
     },
+    fetch: overrides.fetch,
     FormData: overrides.FormData || global.FormData,
     __alerts: []
   };
@@ -94,12 +95,83 @@ function loadFrontend(overrides = {}) {
 
   const source = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
   vm.runInNewContext(
-    `${source}\nglobalThis.__frontend = { state, renderProjectCards, handleSubmit, stockStats };`,
+    `${source}\nglobalThis.__frontend = { state, renderProjectCards, handleSubmit, deleteProject, stockStats };`,
     context,
     { filename: "app.js" }
   );
   return { context, elements, frontend: context.__frontend };
 }
+
+test("HTTP submit creates resources with object CRUD instead of full state PUT", async () => {
+  class ProjectFormData {
+    entries() {
+      return [
+        ["name", "对象级保存项目"],
+        ["code", "LW-CRUD-01"],
+        ["type", "研发（RD）"],
+        ["status", "进行中"],
+        ["owner", "测试"],
+        ["internalDue", "2026-07-10"],
+        ["externalDue", "2026-07-20"],
+        ["summary", ""]
+      ];
+    }
+  }
+  const calls = [];
+  const fetch = async (url, options = {}) => {
+    calls.push({ url, options });
+    return {
+      ok: true,
+      status: options.method === "POST" ? 201 : 200,
+      async json() {
+        if (url === "/api/state") return { settings: {}, projects: [], tasks: [], materials: [], purchases: [], purchaseItems: [], receipts: [], outbounds: [] };
+        return JSON.parse(options.body || "{}");
+      }
+    };
+  };
+  const { frontend } = loadFrontend({ protocol: "http:", fetch, FormData: ProjectFormData });
+
+  await frontend.handleSubmit({
+    preventDefault() {},
+    currentTarget: {
+      dataset: { target: "projects", id: "" },
+      closest() {
+        return { close() {} };
+      }
+    }
+  });
+
+  assert.equal(calls.some((call) => call.url === "/api/state" && call.options.method === "PUT"), false);
+  assert.equal(calls.some((call) => call.url === "/api/projects" && call.options.method === "POST"), true);
+});
+
+test("HTTP project deletion uses object DELETE instead of full state PUT", async () => {
+  const calls = [];
+  const fetch = async (url, options = {}) => {
+    calls.push({ url, options });
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        if (url === "/api/state") return { settings: {}, projects: [], tasks: [], materials: [], purchases: [], purchaseItems: [], receipts: [], outbounds: [] };
+        return { ok: true };
+      }
+    };
+  };
+  const { frontend } = loadFrontend({ protocol: "http:", fetch });
+  frontend.state.projects = [{ id: "p-delete", name: "待删除项目" }];
+  frontend.state.tasks = [];
+  frontend.state.materials = [];
+  frontend.state.purchases = [];
+  frontend.state.purchaseItems = [];
+  frontend.state.receipts = [];
+  frontend.state.outbounds = [];
+
+  await frontend.deleteProject("p-delete");
+
+  assert.equal(calls.some((call) => call.url === "/api/state" && call.options.method === "PUT"), false);
+  assert.equal(calls.some((call) => call.url === "/api/projects/p-delete" && call.options.method === "DELETE"), true);
+});
 
 test("project card rendering escapes user-controlled fields", () => {
   const { elements, frontend } = loadFrontend();

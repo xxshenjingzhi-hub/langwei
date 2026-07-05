@@ -30,7 +30,7 @@ http://localhost:5173
 
 ## 本地运行方式二：启动后端 MVP
 
-当前已提供零依赖 Node.js 后端服务：
+当前已提供 Node.js 后端服务，本地默认使用 SQLite：
 
 ```bash
 npm start
@@ -42,7 +42,7 @@ npm start
 http://localhost:5173
 ```
 
-后端数据文件：
+本地后端数据文件：
 
 ```text
 backend/data/db.sqlite
@@ -51,6 +51,8 @@ backend/data/db.sqlite
 首次启动时会从 `backend/data/db.json`（存在时优先）或 `backend/data/seed.json` 初始化并导入 SQLite。API 说明见：
 
 前端通过 `http://localhost:5173` 访问时，会自动从 `/api/state` 读取后端数据，并在新增、编辑、删除后同步保存到后端；直接用 `file://` 打开时仍使用浏览器本地存储。
+
+生产部署建议选择 PostgreSQL。部署平台创建 PostgreSQL 后，把连接串配置为 `DATABASE_URL`，后端会自动切换到 PostgreSQL；未配置 `DATABASE_URL` 时继续使用本地 SQLite，便于开发和演示。
 
 ```text
 docs/backend-api.md
