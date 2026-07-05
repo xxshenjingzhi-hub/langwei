@@ -72,6 +72,9 @@ const escapeHtml = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+const textOr = (value, fallback = "-") => escapeHtml(value === "" || value === null || value === undefined ? fallback : value);
+const rawHtml = (value) => ({ __rawHtml: String(value ?? "") });
+const renderCell = (cell) => cell && typeof cell === "object" && "__rawHtml" in cell ? cell.__rawHtml : textOr(cell, "");
 
 const settingSections = [
   { key: "projectTypes", title: "项目类型", desc: "用于新增和编辑项目时选择" },
@@ -403,11 +406,11 @@ function purchaseItemSubjectCell(item, showProject = true) {
   const subject = item.materialId ? materialName(item.materialId) : (item.itemName || "-");
   const descriptions = [];
   if (showProject) descriptions.push(`所属项目：${projectName(purchase?.projectId)}`);
-  return `<strong>${subject}</strong>${descriptions.length ? `<div class="muted-cell">${descriptions.join(" · ")}</div>` : ""}`;
+  return `<strong>${textOr(subject)}</strong>${descriptions.length ? `<div class="muted-cell">${descriptions.map((item) => textOr(item)).join(" · ")}</div>` : ""}`;
 }
 
 function purchaseRecordCell(purchase) {
-  return `<strong>${purchase?.code || "未编号"}</strong><div class="muted-cell">${purchase?.name || "-"}</div>`;
+  return `<strong>${textOr(purchase?.code, "未编号")}</strong><div class="muted-cell">${textOr(purchase?.name)}</div>`;
 }
 
 function purchaseItemsForTask(purchaseId) {
@@ -506,7 +509,7 @@ function statusClass(status) {
 }
 
 function badge(status) {
-  return `<span class="status ${statusClass(status)}">${status || "未填写"}</span>`;
+  return `<span class="status ${statusClass(status)}">${textOr(status, "未填写")}</span>`;
 }
 
 function filtered(items, fields) {
@@ -719,7 +722,7 @@ function rowsFromCounts(counts, preferredOrder = []) {
 }
 
 function metricCard(label, value, hint = "") {
-  return `<div class="metric-card"><span>${label}</span><strong>${value}</strong>${hint ? `<small>${hint}</small>` : ""}</div>`;
+  return `<div class="metric-card"><span>${textOr(label, "")}</span><strong>${value && typeof value === "object" && "__rawHtml" in value ? value.__rawHtml : textOr(value, "")}</strong>${hint ? `<small>${textOr(hint, "")}</small>` : ""}</div>`;
 }
 
 function progressBlock(title, value, meta) {
@@ -732,9 +735,9 @@ function progressBlock(title, value, meta) {
 
 function dashboardList(title, rows, emptyText) {
   return `<section class="dashboard-list">
-    <h3>${title}</h3>
+    <h3>${textOr(title, "")}</h3>
     <div class="dashboard-list-body">
-      ${rows.length ? rows.join("") : `<div class="empty-state compact-empty">${emptyText}</div>`}
+      ${rows.length ? rows.join("") : `<div class="empty-state compact-empty">${textOr(emptyText, "")}</div>`}
     </div>
   </section>`;
 }
@@ -744,7 +747,7 @@ function renderHomeDashboard() {
   const totalProjects = state.projects.length;
   const inventoryTotal = dashboard.issuedQty + dashboard.stockQty;
   const riskRows = dashboard.riskItems.map((item) => [
-    badge(item.level === "高" ? "异常" : "进行中"),
+    rawHtml(badge(item.level === "高" ? "异常" : "进行中")),
     item.type,
     projectName(item.projectId),
     item.object,
@@ -776,12 +779,12 @@ function renderHomeDashboard() {
     <div class="dashboard-two-col">
       ${dashboardList(
         "近期任务",
-        dashboard.upcomingTasks.map((task) => `<div class="dashboard-list-row"><strong>${task.name}</strong><span>${projectName(task.projectId)} · ${task.owner || "-"} · ${task.due}</span>${badge(task.status)}</div>`),
+        dashboard.upcomingTasks.map((task) => `<div class="dashboard-list-row"><strong>${textOr(task.name)}</strong><span>${textOr(projectName(task.projectId))} · ${textOr(task.owner)} · ${textOr(task.due)}</span>${badge(task.status)}</div>`),
         "未来 14 天暂无到期任务"
       )}
       ${dashboardList(
         "近期采购到货",
-        dashboard.upcomingPurchases.map((purchase) => `<div class="dashboard-list-row"><strong>${purchase.name || purchase.code || "-"}</strong><span>${projectName(purchase.projectId)} · ${purchase.supplier || "-"} · ${purchase.expectedDelivery}</span>${badge(purchase.status)}</div>`),
+        dashboard.upcomingPurchases.map((purchase) => `<div class="dashboard-list-row"><strong>${textOr(purchase.name || purchase.code)}</strong><span>${textOr(projectName(purchase.projectId))} · ${textOr(purchase.supplier)} · ${textOr(purchase.expectedDelivery)}</span>${badge(purchase.status)}</div>`),
         "未来 14 天暂无预计到货"
       )}
     </div>
@@ -859,16 +862,16 @@ function renderProjectCards() {
         return `<article class="project-card ${project.id === selectedProjectId ? "selected-card" : ""}" data-action="select-project" data-id="${project.id}">
           <div class="project-card-head">
             <div>
-              <h3>${project.name}</h3>
-              <span>${project.code}</span>
+              <h3>${textOr(project.name, "未命名项目")}</h3>
+              <span>${textOr(project.code, "未填写编号")}</span>
             </div>
             ${badge(project.status)}
           </div>
-          <p>${project.summary || "暂无项目概述"}</p>
+          <p>${textOr(project.summary, "暂无项目概述")}</p>
           <div class="project-card-meta">
-            <span>${project.type}</span>
-            <span>负责人：${project.owner || "-"}</span>
-            <span>截止：${project.internalDue || "-"}</span>
+            <span>${textOr(project.type)}</span>
+            <span>负责人：${textOr(project.owner)}</span>
+            <span>截止：${textOr(project.internalDue)}</span>
           </div>
           <div class="completion project-card-progress"><div class="mini-track"><span style="width:${completion}%"></span></div>${fmtPercent(completion)}</div>
           <div class="project-card-foot">
@@ -909,13 +912,13 @@ function renderProjectDetail() {
   $("#detailOverview").innerHTML = `
     <div class="overview-dashboard">
       <div class="metric-grid">
-        ${metricCard("项目状态", badge(project.status), `负责人：${project.owner || "-"}`)}
+        ${metricCard("项目状态", rawHtml(badge(project.status)), `负责人：${textOr(project.owner)}`)}
         ${metricCard("任务进度", `${dashboard.taskDone}/${data.tasks.length}`, `进行中 ${dashboard.taskActive} · 逾期 ${dashboard.overdueTasks.length}`)}
         ${metricCard("BOM 覆盖", `${data.purchaseItems.length} 项采购明细`, `BOM 转采购覆盖 ${fmtPercent(dashboard.bomCoverage)}`)}
         ${metricCard("采购金额", fmtMoney(dashboard.purchaseAmount), `采购记录 ${data.purchases.length} 条`)}
         ${metricCard("入库进度", `${dashboard.storedQuantity}/${dashboard.purchaseQuantity || 0}`, `未入库数量 ${dashboard.storagePending}`)}
         ${metricCard("出库库存", `${dashboard.issuedQuantity}/${dashboard.storedQuantity || 0}`, `当前库存 ${dashboard.stockQuantity}`)}
-        ${metricCard("最近采购到货", data.nearestDelivery || "-", `外部截止：${project.externalDue || "-"}`)}
+        ${metricCard("最近采购到货", textOr(data.nearestDelivery), `外部截止：${textOr(project.externalDue)}`)}
       </div>
 
       <div class="dashboard-progress-grid">
@@ -937,19 +940,19 @@ function renderProjectDetail() {
       <div class="dashboard-two-col">
         ${dashboardList(
           "临近任务",
-          dashboard.upcomingTasks.map((task) => `<div class="dashboard-list-row"><strong>${task.name}</strong><span>${task.owner || "-"} · ${task.due}</span>${badge(task.status)}</div>`),
+          dashboard.upcomingTasks.map((task) => `<div class="dashboard-list-row"><strong>${textOr(task.name)}</strong><span>${textOr(task.owner)} · ${textOr(task.due)}</span>${badge(task.status)}</div>`),
           "暂无临近任务"
         )}
         ${dashboardList(
           "采购跟进",
-          dashboard.upcomingPurchases.map((purchase) => `<div class="dashboard-list-row"><strong>${purchase.name || purchase.code || "-"}</strong><span>${purchase.supplier || "-"} · ${purchase.expectedDelivery}</span>${badge(purchase.status)}</div>`),
+          dashboard.upcomingPurchases.map((purchase) => `<div class="dashboard-list-row"><strong>${textOr(purchase.name || purchase.code)}</strong><span>${textOr(purchase.supplier)} · ${textOr(purchase.expectedDelivery)}</span>${badge(purchase.status)}</div>`),
           "暂无待跟进采购"
         )}
       </div>
 
       <div class="project-brief">
         <span>项目概述</span>
-        <p>${project.summary || "暂无项目情况概述"}</p>
+        <p>${textOr(project.summary, "暂无项目情况概述")}</p>
       </div>
     </div>
   `;
@@ -960,7 +963,7 @@ function renderProjectDetail() {
       task.name,
       task.type,
       task.priority,
-      badge(task.status),
+      rawHtml(badge(task.status)),
       task.owner || "-",
       task.startDate || "-",
       task.due || "-",
@@ -969,7 +972,7 @@ function renderProjectDetail() {
       task.actualEnd || "-",
       durationDays(task.actualStart, task.actualEnd),
       task.remark || "-",
-      rowActions("task", task.id)
+      rawHtml(rowActions("task", task.id))
     ])
   );
 
@@ -986,9 +989,9 @@ function renderProjectDetail() {
       item.unitPrice || "-",
       item.surfaceTreatment || "-",
       item.brandOrSupplier || "-",
-      item.purchaseLink ? `<a href="${escapeHtml(item.purchaseLink)}" target="_blank" rel="noreferrer">打开链接</a>` : "-",
+      item.purchaseLink ? rawHtml(`<a href="${escapeHtml(item.purchaseLink)}" target="_blank" rel="noreferrer">打开链接</a>`) : "-",
       item.remark || "-",
-      `<div class="row-actions"><button class="ghost-button small-button" data-action="create-purchase" data-id="${item.id}">生成采购</button>${rowActionButtons("material", item.id)}</div>`
+      rawHtml(`<div class="row-actions"><button class="ghost-button small-button" data-action="create-purchase" data-id="${escapeHtml(item.id)}">生成采购</button>${rowActionButtons("material", item.id)}</div>`)
     ])
   );
 
@@ -998,11 +1001,11 @@ function renderProjectDetail() {
         purchase.code || "-",
         purchase.name || "-",
         purchase.supplier || "-",
-        badge(purchase.status),
+        rawHtml(badge(purchase.status)),
         purchase.expectedDelivery || "-",
         `${purchaseItemsForTask(purchase.id).length} 项`,
         fmtMoney(purchaseTaskAmount(purchase)),
-        rowActions("purchase", purchase.id, true)
+        rawHtml(rowActions("purchase", purchase.id, true))
       ])
     );
 
@@ -1012,14 +1015,14 @@ function renderProjectDetail() {
         const purchase = purchaseTaskById(item.purchaseId);
         const stats = receiptStats(item.id);
         return [
-          purchaseItemSubjectCell(item, false),
-          purchaseRecordCell(purchase),
+          rawHtml(purchaseItemSubjectCell(item, false)),
+          rawHtml(purchaseRecordCell(purchase)),
           item.supplier || purchase?.supplier || "-",
           item.quantity || "-",
           stats.stored || "-",
           stats.unstored === "" ? "-" : stats.unstored,
-          stats.status ? badge(stats.status) : "-",
-          `<div class="row-actions"><button class="icon-button subtle" data-action="view-receipt-item" data-id="${item.id}" title="查看入库详情" aria-label="查看入库详情">${icons.view}</button><button class="ghost-button small-button" data-action="create-receipt" data-id="${item.id}">新增入库</button></div>`
+          stats.status ? rawHtml(badge(stats.status)) : "-",
+          rawHtml(`<div class="row-actions"><button class="icon-button subtle" data-action="view-receipt-item" data-id="${escapeHtml(item.id)}" title="查看入库详情" aria-label="查看入库详情">${icons.view}</button><button class="ghost-button small-button" data-action="create-receipt" data-id="${escapeHtml(item.id)}">新增入库</button></div>`)
         ];
       })
     );
@@ -1030,14 +1033,14 @@ function renderProjectDetail() {
         const purchase = purchaseTaskById(item.purchaseId);
         const stats = stockStats(item.id);
         return [
-          purchaseItemSubjectCell(item, false),
-          purchaseRecordCell(purchase),
+          rawHtml(purchaseItemSubjectCell(item, false)),
+          rawHtml(purchaseRecordCell(purchase)),
           stats.stored || "-",
           stats.issued || "-",
           stats.stock === "" ? "-" : stats.stock,
           stats.latestOutbound?.outboundDate || "-",
-          stats.outboundStatus ? badge(stats.outboundStatus) : "-",
-          `<div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div>`
+          stats.outboundStatus ? rawHtml(badge(stats.outboundStatus)) : "-",
+          rawHtml(`<div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${escapeHtml(item.id)}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div>`)
         ];
       })
     );
@@ -1049,7 +1052,7 @@ function renderProjectDetail() {
 }
 
 function renderPurchaseFilter() {
-  $("#purchaseProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${project.id}" ${purchaseProjectFilter === project.id ? "selected" : ""}>${project.name}</option>`).join("")}`;
+  $("#purchaseProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${purchaseProjectFilter === project.id ? "selected" : ""}>${textOr(project.name, "未命名项目")}</option>`).join("")}`;
 }
 
 function renderPurchases() {
@@ -1067,12 +1070,12 @@ function renderPurchases() {
   $("#purchaseRows").innerHTML =
     purchases
       .map((item) => `<tr class="${item.id === selectedPurchaseId ? "selected-row" : ""}">
-        <td><button class="project-link" data-action="select-purchase" data-id="${item.id}">${item.code || item.name}</button></td>
-        <td>${item.name || "-"}</td>
-        <td>${projectName(item.projectId)}</td>
-        <td>${item.supplier || "-"}</td>
+        <td><button class="project-link" data-action="select-purchase" data-id="${escapeHtml(item.id)}">${textOr(item.code || item.name)}</button></td>
+        <td>${textOr(item.name)}</td>
+        <td>${textOr(projectName(item.projectId))}</td>
+        <td>${textOr(item.supplier)}</td>
         <td>${badge(item.status)}</td>
-        <td>${item.expectedDelivery || "-"}</td>
+        <td>${textOr(item.expectedDelivery)}</td>
         <td>${purchaseItemsForTask(item.id).length} 项</td>
         <td>${rowActions("purchase", item.id, true)}</td>
       </tr>`)
@@ -1087,8 +1090,8 @@ function openPurchaseDetail(purchaseId) {
   dialog.innerHTML = `<div class="dialog-body detail-dialog-body purchase-detail-dialog">
     <div class="dialog-title-row">
       <div>
-        <h3>${purchase.name}</h3>
-        <p>${projectName(purchase.projectId)} · ${purchase.code || "未填写编号"} · ${purchase.type}</p>
+        <h3>${textOr(purchase.name, "未命名采购")}</h3>
+        <p>${textOr(projectName(purchase.projectId))} · ${textOr(purchase.code, "未填写编号")} · ${textOr(purchase.type)}</p>
       </div>
       <div class="page-actions">
         <button type="button" class="ghost-button small-button" data-action="add-purchase-item" data-id="${purchase.id}">新增采购明细</button>
@@ -1098,16 +1101,16 @@ function openPurchaseDetail(purchaseId) {
       </div>
     </div>
     <dl class="detail-list">
-      <dt>所属项目</dt><dd>${projectName(purchase.projectId)}</dd>
-      <dt>供应商</dt><dd>${purchase.supplier || "-"}</dd>
+      <dt>所属项目</dt><dd>${textOr(projectName(purchase.projectId))}</dd>
+      <dt>供应商</dt><dd>${textOr(purchase.supplier)}</dd>
       <dt>采购状态</dt><dd>${badge(purchase.status)}</dd>
       <dt>合同总金额</dt><dd>${fmtMoney(purchaseTaskAmount(purchase))}</dd>
-      <dt>申请时间</dt><dd>${purchase.applyDate || "-"}</dd>
-      <dt>签订时间</dt><dd>${purchase.contractDate || "-"}</dd>
-      <dt>预计到货</dt><dd>${purchase.expectedDelivery || "-"}</dd>
-      <dt>BOM外新增</dt><dd>${purchase.bomOutside || "否"}</dd>
-      <dt>采购进展</dt><dd>${purchase.progressRemark || "-"}</dd>
-      <dt>风险说明</dt><dd>${purchase.riskRemark || "-"}</dd>
+      <dt>申请时间</dt><dd>${textOr(purchase.applyDate)}</dd>
+      <dt>签订时间</dt><dd>${textOr(purchase.contractDate)}</dd>
+      <dt>预计到货</dt><dd>${textOr(purchase.expectedDelivery)}</dd>
+      <dt>BOM外新增</dt><dd>${textOr(purchase.bomOutside, "否")}</dd>
+      <dt>采购进展</dt><dd>${textOr(purchase.progressRemark)}</dd>
+      <dt>风险说明</dt><dd>${textOr(purchase.riskRemark)}</dd>
     </dl>
     <div class="detail-section">
       <div class="section-label">采购明细</div>
@@ -1125,7 +1128,7 @@ function openPurchaseDetail(purchaseId) {
           item.remark || "-",
           receiptSummaryText(item.id),
           outboundSummaryText(item.id),
-          `<div class="row-actions"><button class="ghost-button small-button" data-action="create-receipt" data-id="${item.id}">新增入库</button><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${rowActionButtons("purchase-item", item.id)}</div>`
+          rawHtml(`<div class="row-actions"><button class="ghost-button small-button" data-action="create-receipt" data-id="${escapeHtml(item.id)}">新增入库</button><button class="ghost-button small-button" data-action="create-outbound" data-id="${escapeHtml(item.id)}">新增出库</button>${rowActionButtons("purchase-item", item.id)}</div>`)
         ])
       ) : `<div class="empty-state compact-empty">暂无采购明细</div>`}
     </div>
@@ -1149,11 +1152,11 @@ function outboundSummaryText(purchaseItemId) {
 }
 
 function renderReceiptFilter() {
-  $("#receiptProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${project.id}" ${receiptProjectFilter === project.id ? "selected" : ""}>${project.name}</option>`).join("")}`;
+  $("#receiptProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${receiptProjectFilter === project.id ? "selected" : ""}>${textOr(project.name, "未命名项目")}</option>`).join("")}`;
 }
 
 function renderOutboundFilter() {
-  $("#outboundProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${project.id}" ${outboundProjectFilter === project.id ? "selected" : ""}>${project.name}</option>`).join("")}`;
+  $("#outboundProjectFilter").innerHTML = `<option value="all">全部项目</option>${state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${outboundProjectFilter === project.id ? "selected" : ""}>${textOr(project.name, "未命名项目")}</option>`).join("")}`;
 }
 
 function receiptStats(purchaseItemId) {
@@ -1195,6 +1198,15 @@ function stockStats(purchaseItemId) {
   return { ...receipt, issued, stock, latestOutbound, outboundStatus };
 }
 
+function availableReceiptQuantity(purchaseItemId, editingId = "") {
+  const purchaseItem = purchaseItemById(purchaseItemId);
+  const purchased = safeNumber(purchaseItem?.quantity);
+  if (!purchased) return Infinity;
+  const currentRecord = editingId ? state.receipts.find((item) => item.id === editingId) : null;
+  const stored = receiptsForPurchaseItem(purchaseItemId).reduce((sum, item) => sum + safeNumber(item.storedQty), 0);
+  return Math.max(purchased - stored + safeNumber(currentRecord?.storedQty), 0);
+}
+
 function outboundStatusForItemRaw(stored, issued) {
   const storedNumber = Number(stored || 0);
   if (storedNumber && issued >= storedNumber) return "已出库";
@@ -1220,14 +1232,14 @@ function renderReceipts() {
     const stats = receiptStats(item.id);
     return `<tr>
       <td>${purchaseItemSubjectCell(item, false)}</td>
-      <td>${projectName(purchase?.projectId)}</td>
+      <td>${textOr(projectName(purchase?.projectId))}</td>
       <td>${purchaseRecordCell(purchase)}</td>
-      <td>${item.supplier || purchase?.supplier || "-"}</td>
+      <td>${textOr(item.supplier || purchase?.supplier)}</td>
       <td>${item.quantity || "-"}</td>
       <td>${stats.stored || "-"}</td>
       <td>${stats.unstored === "" ? "-" : stats.unstored}</td>
       <td>${stats.status ? badge(stats.status) : "-"}</td>
-      <td><div class="row-actions"><button class="icon-button subtle" data-action="view-receipt-item" data-id="${item.id}" title="查看入库详情" aria-label="查看入库详情">${icons.view}</button><button class="ghost-button small-button" data-action="create-receipt" data-id="${item.id}">新增入库</button></div></td>
+      <td><div class="row-actions"><button class="icon-button subtle" data-action="view-receipt-item" data-id="${escapeHtml(item.id)}" title="查看入库详情" aria-label="查看入库详情">${icons.view}</button><button class="ghost-button small-button" data-action="create-receipt" data-id="${escapeHtml(item.id)}">新增入库</button></div></td>
     </tr>`;
   });
   $("#receiptRows").innerHTML = rows.join("") || emptyRow(9);
@@ -1250,14 +1262,14 @@ function renderOutbounds() {
     const stats = stockStats(item.id);
     return `<tr>
       <td>${purchaseItemSubjectCell(item, false)}</td>
-      <td>${projectName(purchase?.projectId)}</td>
+      <td>${textOr(projectName(purchase?.projectId))}</td>
       <td>${purchaseRecordCell(purchase)}</td>
       <td>${stats.stored || "-"}</td>
       <td>${stats.issued || "-"}</td>
       <td>${stats.stock === "" ? "-" : stats.stock}</td>
       <td>${stats.latestOutbound?.outboundDate || "-"}</td>
       <td>${stats.outboundStatus ? badge(stats.outboundStatus) : "-"}</td>
-      <td><div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${item.id}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div></td>
+      <td><div class="row-actions"><button class="ghost-button small-button" data-action="create-outbound" data-id="${escapeHtml(item.id)}">新增出库</button>${stats.latestOutbound ? rowActionButtons("outbound", stats.latestOutbound.id) : ""}</div></td>
     </tr>`;
   });
   $("#outboundRows").innerHTML = rows.join("") || emptyRow(9);
@@ -1282,24 +1294,24 @@ function openReceiptItemDetail(purchaseItemId) {
   dialog.innerHTML = `<div class="dialog-body detail-dialog-body receipt-detail-dialog">
     <div class="dialog-title-row">
       <div>
-        <h3>${purchaseItem.itemName || materialName(purchaseItem.materialId)}</h3>
-        <p>所属项目：${projectName(purchase?.projectId)} · 采购记录：${purchase?.code || "未填写编号"} / ${purchase?.name || "未关联采购记录"}</p>
+        <h3>${textOr(purchaseItem.itemName || materialName(purchaseItem.materialId))}</h3>
+        <p>所属项目：${textOr(projectName(purchase?.projectId))} · 采购记录：${textOr(purchase?.code, "未填写编号")} / ${textOr(purchase?.name, "未关联采购记录")}</p>
       </div>
       <div class="page-actions">
-        <button type="button" class="ghost-button small-button" data-action="create-receipt" data-id="${purchaseItem.id}">新增入库</button>
+        <button type="button" class="ghost-button small-button" data-action="create-receipt" data-id="${escapeHtml(purchaseItem.id)}">新增入库</button>
         <button type="button" class="ghost-button small-button" data-close>关闭</button>
       </div>
     </div>
     <dl class="detail-list">
-      <dt>BOM项</dt><dd>${purchaseItem.materialId ? materialName(purchaseItem.materialId) : "BOM 外新增"}</dd>
-      <dt>所属项目</dt><dd>${projectName(purchase?.projectId)}</dd>
-      <dt>采购记录</dt><dd>${purchase?.code || "未编号"} / ${purchase?.name || "-"}</dd>
-      <dt>供应商</dt><dd>${purchaseItem.supplier || purchase?.supplier || "-"}</dd>
+      <dt>BOM项</dt><dd>${textOr(purchaseItem.materialId ? materialName(purchaseItem.materialId) : "BOM 外新增")}</dd>
+      <dt>所属项目</dt><dd>${textOr(projectName(purchase?.projectId))}</dd>
+      <dt>采购记录</dt><dd>${textOr(purchase?.code, "未编号")} / ${textOr(purchase?.name)}</dd>
+      <dt>供应商</dt><dd>${textOr(purchaseItem.supplier || purchase?.supplier)}</dd>
       <dt>采购数量</dt><dd>${purchaseItem.quantity || "-"}</dd>
       <dt>已入库</dt><dd>${stats.stored || "-"}</dd>
       <dt>未入库数量</dt><dd>${stats.unstored === "" ? "-" : stats.unstored}</dd>
       <dt>入库状态</dt><dd>${stats.status ? badge(stats.status) : "-"}</dd>
-      <dt>质检描述</dt><dd>${stats.latest?.qcDescription || "-"}</dd>
+      <dt>质检描述</dt><dd>${textOr(stats.latest?.qcDescription)}</dd>
     </dl>
     <div class="detail-section">
       <div class="section-label">入库记录</div>
@@ -1308,10 +1320,10 @@ function openReceiptItemDetail(purchaseItemId) {
         receipts.map((item) => [
           item.arrivalDate || "-",
           item.storedQty || "-",
-          badge(item.status),
+          rawHtml(badge(item.status)),
           item.qcDescription || "-",
           item.exception || "-",
-          rowActions("receipt", item.id)
+          rawHtml(rowActions("receipt", item.id))
         ])
       ) : `<div class="empty-state compact-empty">暂无入库记录</div>`}
     </div>
@@ -1348,18 +1360,22 @@ function renderSettings() {
 
 function detailTable(headers, rows) {
   if (!rows.length) return `<div class="empty-state">暂无数据</div>`;
-  return `<div class="table-wrap detail-table"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  return `<div class="table-wrap detail-table"><table><thead><tr>${headers.map((header) => `<th>${textOr(header, "")}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${renderCell(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
 function rowActions(type, id, withView = false) {
-  const view = withView ? `<button class="icon-button subtle" data-action="view-${type}" data-id="${id}" title="查看详情" aria-label="查看详情">${icons.view}</button>` : "";
+  const safeType = escapeHtml(type);
+  const safeId = escapeHtml(id);
+  const view = withView ? `<button class="icon-button subtle" data-action="view-${safeType}" data-id="${safeId}" title="查看详情" aria-label="查看详情">${icons.view}</button>` : "";
   return `<div class="row-actions">${view}${rowActionButtons(type, id)}</div>`;
 }
 
 function rowActionButtons(type, id) {
+  const safeType = escapeHtml(type);
+  const safeId = escapeHtml(id);
   return `
-    <button class="icon-button subtle" data-action="edit-${type}" data-id="${id}" title="编辑" aria-label="编辑">${icons.edit}</button>
-    <button class="icon-button subtle danger" data-action="delete-${type}" data-id="${id}" title="删除" aria-label="删除">${icons.delete}</button>
+    <button class="icon-button subtle" data-action="edit-${safeType}" data-id="${safeId}" title="编辑" aria-label="编辑">${icons.edit}</button>
+    <button class="icon-button subtle danger" data-action="delete-${safeType}" data-id="${safeId}" title="删除" aria-label="删除">${icons.delete}</button>
   `;
 }
 
@@ -1384,15 +1400,15 @@ function render() {
 }
 
 function optionsFrom(key, selected = "") {
-  return state.settings[key].map((option) => `<option value="${option}" ${option === selected ? "selected" : ""}>${option}</option>`).join("");
+  return state.settings[key].map((option) => `<option value="${escapeHtml(option)}" ${option === selected ? "selected" : ""}>${textOr(option, "")}</option>`).join("");
 }
 
 function projectOptions(selected = "") {
-  return state.projects.map((project) => `<option value="${project.id}" ${project.id === selected ? "selected" : ""}>${project.name}</option>`).join("");
+  return state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${project.id === selected ? "selected" : ""}>${textOr(project.name, "未命名项目")}</option>`).join("");
 }
 
 function purchaseTaskOptions(selected = "") {
-  return state.purchases.map((purchase) => `<option value="${purchase.id}" ${purchase.id === selected ? "selected" : ""}>${purchase.code || "未编号"} / ${purchase.name}</option>`).join("");
+  return state.purchases.map((purchase) => `<option value="${escapeHtml(purchase.id)}" ${purchase.id === selected ? "selected" : ""}>${textOr(purchase.code, "未编号")} / ${textOr(purchase.name, "未命名采购")}</option>`).join("");
 }
 
 function purchaseItemOptions(selected = "", projectId = "") {
@@ -1402,13 +1418,13 @@ function purchaseItemOptions(selected = "", projectId = "") {
   return purchaseItems.map((item) => {
     const purchase = purchaseTaskById(item.purchaseId);
     const label = item.materialId ? materialName(item.materialId) : `${item.itemName}${item.spec ? `（${item.spec}）` : ""}`;
-    return `<option value="${item.id}" ${item.id === selected ? "selected" : ""}>${projectName(purchase?.projectId)} / ${purchase?.code || "未编号"} / ${label}</option>`;
+    return `<option value="${escapeHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${textOr(projectName(purchase?.projectId))} / ${textOr(purchase?.code, "未编号")} / ${textOr(label)}</option>`;
   }).join("") || `<option value="">暂无可入库采购明细</option>`;
 }
 
 function materialOptions(selected = "", projectId = "") {
   const materials = projectId ? state.materials.filter((material) => material.projectId === projectId) : state.materials;
-  return materials.map((material) => `<option value="${material.id}" ${material.id === selected ? "selected" : ""}>${projectName(material.projectId)} / ${material.name}${material.spec ? `（${material.spec}）` : ""}</option>`).join("");
+  return materials.map((material) => `<option value="${escapeHtml(material.id)}" ${material.id === selected ? "selected" : ""}>${textOr(projectName(material.projectId))} / ${textOr(`${material.name}${material.spec ? `（${material.spec}）` : ""}`)}</option>`).join("");
 }
 
 function openDialog(id, defaults = {}) {
@@ -1590,6 +1606,35 @@ function handleSubmit(event) {
     data.totalPrice = calcTotal(data.quantity, data.unitPrice);
   }
 
+  if (target === "receipts") {
+    if (!data.purchaseItemId) {
+      window.alert("请先选择可入库的采购明细。");
+      return;
+    }
+    const available = availableReceiptQuantity(data.purchaseItemId, editingId);
+    if (safeNumber(data.storedQty) > available) {
+      window.alert(`当前可入库数量为 ${available}，请检查入库数量。`);
+      return;
+    }
+    data.status = normalizeReceiptStatusValue(data.status, data.storedQty);
+  }
+
+  if (target === "outbounds" && !data.purchaseItemId) {
+    window.alert("请先选择可出库的采购明细。");
+    return;
+  }
+
+  if (target === "outbounds") {
+    const currentRecord = editingId ? state.outbounds.find((item) => item.id === editingId) : null;
+    const stats = stockStats(data.purchaseItemId);
+    const available = safeNumber(stats.stock) + safeNumber(currentRecord?.issuedQty);
+    if (safeNumber(data.issuedQty) > available) {
+      window.alert(`当前可出库库存为 ${available}，请检查出库数量。`);
+      return;
+    }
+    data.status = normalizeOutboundStatusValue(data.status, data.issuedQty);
+  }
+
   if (editingId) {
     const index = state[target].findIndex((item) => item.id === editingId);
     if (index >= 0) state[target][index] = { ...state[target][index], ...data, id: editingId };
@@ -1617,27 +1662,7 @@ function handleSubmit(event) {
   }
 
   if (target === "receipts") {
-    if (!data.purchaseItemId) {
-      window.alert("请先选择可入库的采购明细。");
-      return;
-    }
     syncPurchaseStatusByReceiptItem(data.purchaseItemId);
-  }
-
-  if (target === "outbounds" && !data.purchaseItemId) {
-    window.alert("请先选择可出库的采购明细。");
-    return;
-  }
-
-  if (target === "outbounds") {
-    const currentRecord = editingId ? state.outbounds.find((item) => item.id === editingId) : null;
-    const stats = stockStats(data.purchaseItemId);
-    const available = safeNumber(stats.stock) + safeNumber(currentRecord?.issuedQty);
-    if (safeNumber(data.issuedQty) > available) {
-      window.alert(`当前可出库库存为 ${available}，请检查出库数量。`);
-      return;
-    }
-    data.status = normalizeOutboundStatusValue(data.status, data.issuedQty);
   }
 
   if (target === "purchaseItems") {
