@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
+const { DatabaseSync } = require("node:sqlite");
 const { Readable } = require("node:stream");
 const test = require("node:test");
 
@@ -62,6 +63,52 @@ test("dashboard returns project, risk, inventory and chart summaries", async () 
   assert.equal(body.quantities.stock, 1);
   assert.ok(Array.isArray(body.charts.projectStatuses));
   assert.ok(body.riskItems.some((item) => item.type === "任务逾期"));
+});
+
+test("sqlite database is initialized from seed with relational schema", async () => {
+  await request("/api/state");
+  const sqlitePath = path.join(dataDir, "db.sqlite");
+  const stat = await fs.stat(sqlitePath);
+  assert.ok(stat.size > 0);
+
+  const db = new DatabaseSync(sqlitePath, { readOnly: true });
+  try {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name);
+    for (const table of ["projects", "project_tasks", "bom_items", "purchases", "purchase_items", "receipt_records", "outbound_records", "dictionary_options"]) {
+      assert.ok(tables.includes(table), `${table} table should exist`);
+    }
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM projects").get().count, 3);
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM dictionary_options WHERE type = 'suppliers'").get().count, 6);
+  } finally {
+    db.close();
+  }
+});
+
+test("sqlite persists CRUD changes across API reads", async () => {
+  const project = {
+    id: "p-sqlite-persist",
+    name: "SQLite 持久化项目",
+    code: "LW-SQLITE-PERSIST",
+    type: "研发（RD）",
+    status: "进行中"
+  };
+  const created = await request("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(project)
+  });
+  assert.equal(created.response.status, 201);
+
+  const sqlitePath = path.join(dataDir, "db.sqlite");
+  const db = new DatabaseSync(sqlitePath, { readOnly: true });
+  try {
+    assert.equal(db.prepare("SELECT name FROM projects WHERE id = ?").get(project.id).name, project.name);
+  } finally {
+    db.close();
+  }
+
+  const fetched = await request(`/api/projects/${project.id}`);
+  assert.equal(fetched.response.status, 200);
+  assert.equal(fetched.body.name, project.name);
 });
 
 test("resource CRUD works and writes backups", async () => {

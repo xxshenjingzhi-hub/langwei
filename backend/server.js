@@ -2,12 +2,9 @@ const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { randomUUID } = require("node:crypto");
+const { readDb, writeDb } = require("./storage");
 
 const ROOT = path.resolve(__dirname, "..");
-const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, "data");
-const DB_PATH = path.join(DATA_DIR, "db.json");
-const SEED_PATH = process.env.SEED_PATH ? path.resolve(process.env.SEED_PATH) : path.join(__dirname, "data", "seed.json");
-const BACKUP_DIR = process.env.BACKUP_DIR ? path.resolve(process.env.BACKUP_DIR) : path.join(DATA_DIR, "backups");
 const PORT = Number(process.env.PORT || 5173);
 
 const resourceList = [
@@ -32,47 +29,6 @@ const staticTypes = {
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml"
 };
-
-async function ensureDb() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DB_PATH);
-  } catch {
-    const seed = await fs.readFile(SEED_PATH, "utf8");
-    await fs.writeFile(DB_PATH, seed);
-  }
-}
-
-async function readDb() {
-  await ensureDb();
-  return JSON.parse(await fs.readFile(DB_PATH, "utf8"));
-}
-
-async function writeDb(db) {
-  await backupDb();
-  const tmpPath = `${DB_PATH}.tmp`;
-  await fs.writeFile(tmpPath, `${JSON.stringify(db, null, 2)}\n`);
-  await fs.rename(tmpPath, DB_PATH);
-}
-
-async function backupDb() {
-  if (process.env.BACKUP_ON_WRITE === "false") return;
-  try {
-    await fs.access(DB_PATH);
-  } catch {
-    return;
-  }
-  await fs.mkdir(BACKUP_DIR, { recursive: true });
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  await fs.copyFile(DB_PATH, path.join(BACKUP_DIR, `db-${stamp}.json`));
-  await pruneBackups();
-}
-
-async function pruneBackups(maxBackups = Number(process.env.MAX_BACKUPS || 30)) {
-  if (!Number.isFinite(maxBackups) || maxBackups <= 0) return;
-  const files = (await fs.readdir(BACKUP_DIR)).filter((file) => file.endsWith(".json")).sort().reverse();
-  await Promise.all(files.slice(maxBackups).map((file) => fs.unlink(path.join(BACKUP_DIR, file))));
-}
 
 function sendJson(res, status, data) {
   res.writeHead(status, {

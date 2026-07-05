@@ -1,6 +1,6 @@
 # 后端 API 设计
 
-当前后端 MVP 使用 Node.js 原生 HTTP 服务实现，不依赖外部包。数据暂存为 `backend/data/db.json`，接口形状按后续数据库版设计。写入时使用临时文件替换，避免保存过程中损坏数据文件。
+当前后端使用 Node.js 原生 HTTP 服务 + SQLite 存储实现，不依赖 npm 外部包。默认数据库文件为 `backend/data/db.sqlite`；首次启动时如果数据库为空，会从 `backend/data/db.json`（存在时优先）或 `backend/data/seed.json` 导入初始数据。写入会通过 SQLite 事务提交，并在写入前保存一份 JSON 快照备份。
 
 ## 启动
 
@@ -35,7 +35,8 @@ npm test
 | 变量 | 默认值 | 用途 |
 |---|---|---|
 | `PORT` | `5173` | 服务端口 |
-| `DATA_DIR` | `backend/data` | 数据文件目录 |
+| `DATA_DIR` | `backend/data` | 数据目录 |
+| `SQLITE_PATH` | `DATA_DIR/db.sqlite` | SQLite 数据库文件路径 |
 | `BACKUP_DIR` | `DATA_DIR/backups` | 数据备份目录 |
 | `BACKUP_ON_WRITE` | `true` | 设为 `false` 可关闭写入前备份 |
 | `MAX_BACKUPS` | `30` | 最多保留备份数量 |

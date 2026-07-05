@@ -45,10 +45,10 @@ http://localhost:5173
 后端数据文件：
 
 ```text
-backend/data/db.json
+backend/data/db.sqlite
 ```
 
-首次启动时会从 `backend/data/seed.json` 初始化。API 说明见：
+首次启动时会从 `backend/data/db.json`（存在时优先）或 `backend/data/seed.json` 初始化并导入 SQLite。API 说明见：
 
 前端通过 `http://localhost:5173` 访问时，会自动从 `/api/state` 读取后端数据，并在新增、编辑、删除后同步保存到后端；直接用 `file://` 打开时仍使用浏览器本地存储。
 
